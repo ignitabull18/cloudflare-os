@@ -26,6 +26,15 @@ declare global {
       // Note: outside gateway mode, Workers AI (provider "cloudflare") is BYOK like every other
       // provider -- the account ID and API token live in the user's model config, not in env.
 
+      // Optional deployment-owned Codex subscription model. The secret seeds the broker once;
+      // rotated refresh and access tokens live only in the broker Durable Object.
+      CODEX_OAUTH_REFRESH_TOKEN?: string;
+      CODEX_EGRESS_URL?: string;
+      CODEX_EGRESS_TOKEN?: string;
+      CODEX_TOKEN_BROKER: DurableObjectNamespace<
+        import("./codex-subscription.js").CodexTokenBroker
+      >;
+
       // Blueprint storage bindings.
       BLUEPRINTS: KVNamespace;             // Workers KV for blueprint metadata lookup
       BLUEPRINT_CONTENT: R2Bucket;         // R2 bucket for blueprint code snapshots

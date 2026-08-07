@@ -56,11 +56,26 @@
       // login back to the waiting browser.
       "tag": "v2",
       "new_sqlite_classes": [ "PendingLogin" ]
+    },
+    {
+      // Deployment-private OAuth token rotation and inference proxy for the optional Codex
+      // subscription model.
+      "tag": "v3",
+      "new_sqlite_classes": [ "CodexTokenBroker" ]
     }
   ],
 
-  // All DO classes (UserDurableObject, OverseerDurableObject, AdminSettings, PendingLogin, ...) are
-  // reached via ctx.exports and need no explicit durable_objects binding.
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CODEX_TOKEN_BROKER",
+        "class_name": "CodexTokenBroker"
+      }
+    ]
+  },
+
+  // Most DO classes are reached via ctx.exports. CODEX_TOKEN_BROKER is explicit because the model
+  // resolver receives env rather than an execution context and needs a private fetch binding.
   "kv_namespaces": [
     {
       "binding": "BLUEPRINTS",
