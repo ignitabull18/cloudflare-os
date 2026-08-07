@@ -412,23 +412,24 @@ function getModelViaCodexSubscription(
     sessionAffinity,
     fetch: async (input, init) => {
       const request = new Request(input, init);
+      const brokerHeaders = new Headers(request.headers);
+      brokerHeaders.delete("Authorization");
       if (request.headers.get("Content-Encoding") === "zstd") {
         const zlib = process.getBuiltinModule?.("node:zlib") as typeof import("node:zlib") | undefined;
         if (!zlib?.zstdDecompressSync) {
           throw new Error("Codex relay requires zstd decompression support.");
         }
-        const headers = new Headers(request.headers);
-        headers.delete("Content-Encoding");
+        brokerHeaders.delete("Content-Encoding");
         const compressed = new Uint8Array(await request.arrayBuffer());
         const body = zlib.zstdDecompressSync(compressed);
         return broker.fetch(new Request(request.url, {
           method: "POST",
-          headers,
+          headers: brokerHeaders,
           body,
           redirect: "manual",
         }));
       }
-      return broker.fetch(new Request(request, { redirect: "manual" }));
+      return broker.fetch(new Request(request, { headers: brokerHeaders, redirect: "manual" }));
     },
   });
 }
