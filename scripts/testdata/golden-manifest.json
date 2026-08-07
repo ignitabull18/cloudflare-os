@@ -15,7 +15,7 @@
   },
   "commit": "0000000000000000000000000000000000000000",
   "createdAt": "2026-01-01T00:00:00.000Z",
-  "manifestVersion": 1,
+  "manifestVersion": 2,
   "releaseId": "r000000-fixture",
   "workers": {
     "gatekeeper-cloudflare": {
@@ -1050,6 +1050,11 @@
           "type": "r2_bucket"
         },
         {
+          "class_name": "CodexTokenBroker",
+          "name": "CODEX_TOKEN_BROKER",
+          "type": "durable_object_namespace"
+        },
+        {
           "name": "BROWSER",
           "type": "browser"
         },
@@ -1099,6 +1104,12 @@
             "PendingLogin"
           ],
           "tag": "v2"
+        },
+        {
+          "new_sqlite_classes": [
+            "CodexTokenBroker"
+          ],
+          "tag": "v3"
         }
       ],
       "modules": [
