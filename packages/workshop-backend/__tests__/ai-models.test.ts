@@ -364,6 +364,43 @@ describe("getModel direct routing (no gateway)", () => {
       expect(handle.model.baseUrl).toBe("http://my-ollama:11434/v1");
     }
   });
+
+  it("routes Codex subscription requests through the private token broker", async () => {
+    let brokerRequest: Request | undefined;
+    const broker = {
+      fetch: async (request: Request) => {
+        brokerRequest = request;
+        return Response.json({ error: { message: "stubbed" } }, { status: 400 });
+      },
+    };
+    const tokenBroker = {
+      getByName: () => broker,
+    } as unknown as DurableObjectNamespace;
+
+    const handle = getModel(env({
+      CF_AI_GATEWAY: undefined,
+      CODEX_OAUTH_REFRESH_TOKEN: "deployment-refresh-token",
+      CODEX_EGRESS_URL: "https://bridge.example/api/responses",
+      CODEX_EGRESS_TOKEN: "bridge-token",
+      CODEX_TOKEN_BROKER: tokenBroker,
+    }), {
+      provider: "openai",
+      model: "gpt-5.6-sol",
+      apiToken: "",
+      authentication: "codex-subscription",
+    }, INITIATOR);
+
+    expect(handle.model.baseUrl).toBe("https://chatgpt.com/backend-api");
+    expect(handle.model.api).toBe("openai-codex-responses");
+    const stream = handle.stream(handle.model, {
+      messages: [{ role: "user", content: "hello", timestamp: 0 }],
+    }, { maxRetries: 0 });
+    const message = await stream.result();
+
+    expect(message.stopReason).toBe("error");
+    expect(brokerRequest?.url).toBe("https://chatgpt.com/backend-api/codex/responses");
+    expect(brokerRequest?.headers.get("authorization")).toBeNull();
+  }, 15000);
 });
 
 describe("PDF attachment bridging", () => {

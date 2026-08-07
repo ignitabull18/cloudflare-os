@@ -935,8 +935,16 @@ export type AiModelConfig = {
   // Name of the specific model, as specified to the provider's API.
   model: string;
 
-  // Secret API token for the respective provider, for billing purposes.
+  // Secret API token for the respective provider, for billing purposes. Empty when
+  // `authentication` is "codex-subscription" because the deployment-owned token broker supplies
+  // and refreshes the user's ChatGPT credential.
   apiToken: string;
+
+  /**
+   * Authentication route for this model. Omitted and "api-token" both use `apiToken` directly;
+   * "codex-subscription" uses the deployment's private ChatGPT OAuth token broker.
+   */
+  authentication?: "api-token" | "codex-subscription";
 
   // Cloudflare account ID owning the Workers AI deployment the token authorizes. Required for
   // provider "cloudflare" (whose REST endpoint is account-scoped); unused for other providers.

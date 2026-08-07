@@ -12,6 +12,11 @@ import type { AdminSettings } from "./admin-settings.js";
 import { isReservedBlueprintKey, readBlueprintKvRecord } from "./blueprint-archive.js";
 import { filterEnabledResources, isResourceDisabled, readAdminConfig } from "./admin-config.js";
 import { buildGatekeeperVendorMap } from "./auth/auth-vendors.js";
+import {
+  CODEX_SUBSCRIPTION_PROFILE_ID,
+  codexSubscriptionModel,
+  isCodexSubscriptionConfigured,
+} from "./codex-subscription.js";
 
 const logger = createWorkshopLogger("workshop.user");
 
@@ -505,6 +510,10 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   async listModels(): Promise<AiChatAuthorInfo[]> {
     let result: AiChatAuthorInfo[] = [];
 
+    if (isCodexSubscriptionConfigured(this.env)) {
+      result.push(codexSubscriptionModel().profile);
+    }
+
     // When AI Gateway mode is active, include all suggested models for enabled providers.
     let gwConfig = getAiGatewayConfig(this.env);
     let gwModelIds = new Set<string>();
@@ -525,6 +534,11 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   }
 
   async addModel(profile: AiChatAuthorInfo, config: AiModelConfig): Promise<void> {
+    if (profile.id === CODEX_SUBSCRIPTION_PROFILE_ID ||
+        config.authentication === "codex-subscription") {
+      throw new Error("The deployment-owned Codex subscription model cannot be replaced.");
+    }
+
     let gwConfig = getAiGatewayConfig(this.env);
     if (gwConfig && !gwConfig.providers.has(config.provider)) {
       throw new Error(`Provider "${config.provider}" is not available in AI Gateway mode.`);
@@ -535,6 +549,10 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   }
 
   async deleteModel(id: string): Promise<void> {
+    if (id === CODEX_SUBSCRIPTION_PROFILE_ID && isCodexSubscriptionConfigured(this.env)) {
+      throw new Error("The deployment-owned Codex subscription model cannot be deleted.");
+    }
+
     // In AI Gateway mode, don't allow deleting built-in suggested models.
     let gwConfig = getAiGatewayConfig(this.env);
     if (gwConfig) {
@@ -554,7 +572,10 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
 
   async getQuickModel(): Promise<null | string> {
     let result = this.storage.quickModel.get();
-    if (result && this.storage.aiModels.get(result)) {
+    if (result === CODEX_SUBSCRIPTION_PROFILE_ID &&
+        isCodexSubscriptionConfigured(this.env)) {
+      return result;
+    } else if (result && this.storage.aiModels.get(result)) {
       return result;
     } else {
       return null;
@@ -569,7 +590,9 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
     if (id !== null) {
       // Validate that the model exists in the user's configured models or as a gateway model.
       let gwConfig = getAiGatewayConfig(this.env);
-      let exists = !!this.storage.aiModels.get(id) || !!gwConfig?.resolveModel(id);
+      let exists = !!this.storage.aiModels.get(id) || !!gwConfig?.resolveModel(id) ||
+          (id === CODEX_SUBSCRIPTION_PROFILE_ID &&
+              isCodexSubscriptionConfigured(this.env));
       if (!exists) {
         throw new Error(`No such model: ${id}`);
       }
@@ -670,8 +693,12 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
       profile: this.storage.profile.get()
     };
     if (modelId) {
+      if (modelId === CODEX_SUBSCRIPTION_PROFILE_ID &&
+          isCodexSubscriptionConfigured(this.env)) {
+        result.aiModel = codexSubscriptionModel();
+      }
       // In AI Gateway mode, resolve gateway models first.
-      if (gwConfig) {
+      if (!result.aiModel && gwConfig) {
         result.aiModel = gwConfig.resolveModel(modelId);
       }
       if (!result.aiModel) {
@@ -686,11 +713,18 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
       result.quickModel = gwConfig.getQuickModelConfig();
     } else {
       let quickModelId = this.storage.quickModel.get();
-      if (quickModelId) {
+      if (quickModelId === CODEX_SUBSCRIPTION_PROFILE_ID &&
+          isCodexSubscriptionConfigured(this.env)) {
+        result.quickModel = codexSubscriptionModel().config;
+      } else if (quickModelId) {
         let quickModel = this.storage.aiModels.get(quickModelId);
         if (quickModel) {
           result.quickModel = quickModel.config;
         }
+      } else if (isCodexSubscriptionConfigured(this.env)) {
+        // A subscription-backed deployment should work immediately without requiring a second
+        // manual model selection for title generation.
+        result.quickModel = codexSubscriptionModel().config;
       }
     }
     return result;

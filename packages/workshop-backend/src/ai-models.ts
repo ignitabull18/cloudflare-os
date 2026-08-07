@@ -7,11 +7,13 @@ import type {
 import { stream as anthropicMessagesStream } from "@earendil-works/pi-ai/api/anthropic-messages";
 import { stream as googleGenerativeAiStream } from "@earendil-works/pi-ai/api/google-generative-ai";
 import { stream as openaiCompletionsStream } from "@earendil-works/pi-ai/api/openai-completions";
+import { stream as openaiCodexResponsesStream } from "@earendil-works/pi-ai/api/openai-codex-responses";
 import { stream as openaiResponsesStream } from "@earendil-works/pi-ai/api/openai-responses";
 import { ANTHROPIC_MODELS } from "@earendil-works/pi-ai/providers/anthropic.models";
 import { CLOUDFLARE_WORKERS_AI_MODELS } from "@earendil-works/pi-ai/providers/cloudflare-workers-ai.models";
 import { GOOGLE_MODELS } from "@earendil-works/pi-ai/providers/google.models";
 import { OPENAI_MODELS } from "@earendil-works/pi-ai/providers/openai.models";
+import { OPENAI_CODEX_MODELS } from "@earendil-works/pi-ai/providers/openai-codex.models";
 import { ApprovalQueue, Gatekeeper, ResourceDescription } from '@gadgets/workshop-shared/gatekeeper';
 import { LanguageModelBinding } from "./ai-model-binding";
 import AI_MODEL_BINDING_TYPES from "./ai-model-binding.txt";
@@ -20,6 +22,7 @@ import { AiChatAuthorInfo, AiModelConfig, SUGGESTED_MODELS, WORKERS_AI_OUTPUT_LI
 import { AiGatewayConfig, getAiGatewayConfig, type AiGatewayLogRoute } from "./ai-gateway.js";
 import { completeText } from "./ai-invoke.js";
 import { bridgePdfAttachments } from "./chat-attachment-pdf.js";
+import { isCodexSubscriptionConfigured } from "./codex-subscription.js";
 
  // Routing to bill a user's own Cloudflare account for inference (BYOK path once the free tier is
  // exhausted). Defined here to avoid a backend->ai-gateway-billing type import cycle at runtime.
@@ -109,6 +112,7 @@ function buildMetadata(initiator: AiChatAuthorInfo, context?: GatewayMetadataCon
 const API_STREAMS: Record<string, StreamFunction<Api, SimpleStreamOptions>> = {
   "anthropic-messages": anthropicMessagesStream as StreamFunction<Api, SimpleStreamOptions>,
   "openai-responses": openaiResponsesStream as StreamFunction<Api, SimpleStreamOptions>,
+  "openai-codex-responses": openaiCodexResponsesStream as StreamFunction<Api, SimpleStreamOptions>,
   "openai-completions": openaiCompletionsStream as StreamFunction<Api, SimpleStreamOptions>,
   "google-generative-ai": googleGenerativeAiStream as StreamFunction<Api, SimpleStreamOptions>,
 };
@@ -258,6 +262,8 @@ type HandleArgs = {
   gatewayMetadata?: GatewayMetadata;
   sessionAffinity?: string;
   aiGatewayLogRoute?: AiGatewayLogRoute;
+  // Optional deployment-private transport (currently used by the Codex OAuth token broker).
+  fetch?: SimpleStreamOptions["fetch"];
 };
 
 function makeHandle(args: HandleArgs): ModelHandle {
@@ -281,7 +287,9 @@ function makeHandle(args: HandleArgs): ModelHandle {
   const apiExtras: Record<string, unknown> =
       args.model.api === "anthropic-messages"
           ? (anthropicCompat?.forceAdaptiveThinking === true ? { thinkingEnabled: true } : {}) :
-      args.model.api === "openai-responses" ? { reasoningEffort: "medium" } : {};
+      args.model.api === "openai-responses" ? { reasoningEffort: "medium" } :
+      args.model.api === "openai-codex-responses"
+          ? { reasoningEffort: "medium", transport: "sse" } : {};
 
   const handle: ModelHandle = {
     model: args.model,
@@ -306,6 +314,7 @@ function makeHandle(args: HandleArgs): ModelHandle {
             ? apiExtras
             : args.model.api === "anthropic-messages" ? { thinkingEnabled: false } : {}),
         ...options,
+        ...(args.fetch ? { fetch: args.fetch } : {}),
         ...(args.apiKey !== undefined ? { apiKey: args.apiKey } : {}),
         ...(Object.keys(headers).length > 0 ? { headers } : {}),
         // Session affinity: pi only sends it when caching isn't "none" (fine for us).
@@ -342,6 +351,10 @@ function makeHandle(args: HandleArgs): ModelHandle {
 export function getModel(env: Cloudflare.Env, config: AiModelConfig,
                          initiator: AiChatAuthorInfo,
                          options: ModelRoutingOptions = {}): ModelHandle {
+  if (config.authentication === "codex-subscription") {
+    return getModelViaCodexSubscription(env, config, options.sessionAffinity);
+  }
+
   // BYOK: a connected user's own Cloudflare account pays for everything (all providers, including
   // Workers AI), routed through the user's own AI Gateway with unified billing. Honored regardless
   // of whether a platform AI Gateway is configured, so connected users are always billed correctly.
@@ -359,6 +372,65 @@ export function getModel(env: Cloudflare.Env, config: AiModelConfig,
   }
 
   return getModelDirect(config, options.sessionAffinity);
+}
+
+// ChatGPT subscription path. pi still builds the standard Responses request, but every fetch goes
+// through a private Durable Object that owns refresh-token rotation and adds the account headers.
+function getModelViaCodexSubscription(
+  env: Cloudflare.Env,
+  config: AiModelConfig,
+  sessionAffinity?: string,
+): ModelHandle {
+  if (config.provider !== "openai") {
+    throw new Error("Codex subscription authentication requires the OpenAI provider.");
+  }
+  if (!isCodexSubscriptionConfigured(env) || !env.CODEX_TOKEN_BROKER) {
+    throw new Error("Codex subscription authentication is not configured for this deployment.");
+  }
+
+  const broker = env.CODEX_TOKEN_BROKER.getByName("");
+  const catalog = (OPENAI_CODEX_MODELS as Record<string, Model<Api>>)[config.model];
+  const placeholderPayload = btoa(JSON.stringify({
+    "https://api.openai.com/auth": { chatgpt_account_id: "broker" },
+  }));
+  return makeHandle({
+    model: {
+      ...catalog,
+      id: config.model,
+      name: catalog?.name ?? config.model,
+      api: "openai-codex-responses",
+      provider: "openai-codex",
+      baseUrl: "https://chatgpt.com/backend-api",
+      reasoning: catalog?.reasoning ?? true,
+      input: catalog?.input ?? ["text", "image"],
+      cost: ZERO_COST,
+      ...(catalog ? {} : modelTokenWindow(config, catalog)),
+      thinkingLevelMap: catalog?.thinkingLevelMap,
+      compat: catalog?.compat,
+    },
+    apiKey: `unused.${placeholderPayload}.unused`,
+    sessionAffinity,
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
+      if (request.headers.get("Content-Encoding") === "zstd") {
+        const zlib = process.getBuiltinModule?.("node:zlib") as typeof import("node:zlib") | undefined;
+        if (!zlib?.zstdDecompressSync) {
+          throw new Error("Codex relay requires zstd decompression support.");
+        }
+        const headers = new Headers(request.headers);
+        headers.delete("Content-Encoding");
+        const compressed = new Uint8Array(await request.arrayBuffer());
+        const body = zlib.zstdDecompressSync(compressed);
+        return broker.fetch(new Request(request.url, {
+          method: "POST",
+          headers,
+          body,
+          redirect: "manual",
+        }));
+      }
+      return broker.fetch(new Request(request, { redirect: "manual" }));
+    },
+  });
 }
 
 // Route inference through the user's own account (unified billing) via their account's default AI
