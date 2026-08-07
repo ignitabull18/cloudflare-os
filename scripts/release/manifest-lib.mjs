@@ -20,13 +20,14 @@ import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "jsonc-parser";
 
-export const MANIFEST_VERSION = 1;
+export const MANIFEST_VERSION = 2;
 
 // wrangler.jsonc keys this generator understands. Anything else fails closed — a new config key
 // on a deployable worker needs an explicit decision about how customer instances get it.
 const HANDLED_CONFIG_KEYS = new Set([
   "$schema", "name", "main", "build", "compatibility_date", "compatibility_flags", "rules",
-  "migrations", "observability", "kv_namespaces", "r2_buckets", "worker_loaders", "services",
+  "migrations", "observability", "durable_objects", "kv_namespaces", "r2_buckets",
+  "worker_loaders", "services",
   "assets", "vars",
   // Browser Rendering (Gadget PDF exports). Unlike artifacts it is generally available, so it
   // passes through to customer instances as a placeholder-free binding, like the AI binding.
@@ -129,6 +130,14 @@ export function buildWorkerEntry({ pkgName, config, mainModule, modules, deployI
       type: "r2_bucket",
       name: r2.binding,
       bucket_name: `$R2_${r2.binding}_NAME`,
+    });
+  }
+  for (const durableObject of config.durable_objects?.bindings ?? []) {
+    bindings.push({
+      type: "durable_object_namespace",
+      name: durableObject.name,
+      class_name: durableObject.class_name,
+      ...(durableObject.script_name ? { script_name: durableObject.script_name } : {}),
     });
   }
   if (config.browser) {

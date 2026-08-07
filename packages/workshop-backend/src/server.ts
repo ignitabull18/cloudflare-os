@@ -46,6 +46,8 @@ function publicBlueprintInfo(id: string, metadata: BlueprintPublicInfo['metadata
 // Re-export entrypoint types from ai-models.ts.
 export { LanguageModelGatekeeper };
 
+export { CodexTokenBroker } from "./codex-subscription.js";
+
 // Re-export entrypoint types from admin-settings.ts.
 export { AdminSettings };
 
