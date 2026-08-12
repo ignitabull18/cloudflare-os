@@ -1323,7 +1323,7 @@ export default function GadgetEditor() {
     <div className="flex flex-col h-screen overflow-hidden bg-kumo-base relative">
       {/* ═══ SHARED TOP BAR (visible in both modes) ════════════════════════════ */}
       <div
-        className="relative flex items-center justify-between px-4 sm:px-6 backdrop-blur-md border-b border-kumo-line flex-shrink-0 gap-3"
+        className="relative flex items-center justify-between px-2 sm:px-6 backdrop-blur-md border-b border-kumo-line flex-shrink-0 gap-1 sm:gap-3"
         style={{ height: TOPBAR_H, backgroundColor: 'color-mix(in srgb, var(--color-kumo-base) 80%, transparent)' }}
       >
         <TopBarNotice />
@@ -1387,7 +1387,7 @@ export default function GadgetEditor() {
           )}
 
           {metadata.owner && (
-            <span className="text-xs text-kumo-inactive flex-shrink-0">
+            <span className="hidden text-xs text-kumo-inactive flex-shrink-0 sm:inline">
               by {metadata.owner.name}
             </span>
           )}
@@ -1395,16 +1395,29 @@ export default function GadgetEditor() {
 
         {/* Right: presence, cost, workspace, share, blueprints */}
         <div className="flex items-center gap-1 flex-shrink-0">
-          <GadgetPresence
-            overseer={overseer.stub}
-            authenticatedApi={authenticatedApi}
-            currentUserId={userInfo?.id ?? null}
-          />
+          <div className="hidden sm:block">
+            <GadgetPresence
+              overseer={overseer.stub}
+              authenticatedApi={authenticatedApi}
+              currentUserId={userInfo?.id ?? null}
+            />
+          </div>
 
           {metadata.totalCost != null && (
-            <span className="mr-2 text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle">
+            <span className="mr-2 hidden text-[12px] leading-4 font-normal tracking-[-0.2px] text-kumo-subtle sm:inline">
               {formatHeaderCost(metadata.totalCost)}
             </span>
+          )}
+
+          {!showFullEditor && selectedGadgetId !== null && (
+            <WorkshopIconButton
+              onClick={() => handleSelectWorkpiece(selectedGadgetId)}
+              className="sm:hidden"
+              title="Open app"
+              aria-label="Open app"
+            >
+              <ArrowsOutSimple size={17} />
+            </WorkshopIconButton>
           )}
 
           <ActivityNotifications
@@ -1430,6 +1443,7 @@ export default function GadgetEditor() {
           <WorkshopIconButton
             onClick={() => setBlueprintModalOpen(true)}
             disabled={!selectedGadgetStub}
+            className="hidden sm:flex"
             title="Blueprints"
             aria-label="Blueprints"
           >
@@ -1440,6 +1454,7 @@ export default function GadgetEditor() {
             <WorkshopIconButton
               danger
               onClick={() => setDeleteDialogOpen(true)}
+              className="hidden sm:flex"
               title="Delete workspace"
               aria-label="Delete workspace"
             >
@@ -1448,14 +1463,17 @@ export default function GadgetEditor() {
           )}
 
           {/* User menu */}
-          <div className="ml-2">
+          <div className="sm:ml-2">
             <UserMenu />
           </div>
         </div>
       </div>
 
       {/* ═══ BODY ═════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-1 min-h-0 relative overflow-hidden">
+      <div
+        className="workspace-editor-body flex flex-1 min-h-0 relative overflow-hidden"
+        data-mobile-pane={showFullEditor ? 'detail' : 'chat'}
+      >
 
         {isAgentActive && (
           <div
@@ -1470,7 +1488,7 @@ export default function GadgetEditor() {
 
         {/* ── LEFT: Chat pane ──────────────────────────────────────────────────── */}
         <div
-          className={`flex flex-col flex-shrink-0 ${workspaceTransitionClass} ${showFullEditor ? 'border-r border-kumo-line' : ''}`}
+          className={`workspace-chat-pane flex flex-col flex-shrink-0 ${workspaceTransitionClass} ${showFullEditor ? 'border-r border-kumo-line' : ''}`}
           style={{
             width: showFullEditor
               ? chatWidth
@@ -1531,7 +1549,7 @@ export default function GadgetEditor() {
 
         {/* ── Resize handle ───────────────────────────────────────────────────── */}
         <div
-          className={`flex-shrink-0 overflow-visible bg-kumo-line cursor-col-resize relative touch-none ${workspaceTransitionClass}`}
+          className={`workspace-resize-handle flex-shrink-0 overflow-visible bg-kumo-line cursor-col-resize relative touch-none ${workspaceTransitionClass}`}
           style={{ width: showFullEditor ? 1 : 0 }}
           onPointerDown={handleResizePointerDown}
           onPointerMove={handleResizePointerMove}
@@ -1543,7 +1561,7 @@ export default function GadgetEditor() {
 
         {/* ── RIGHT: App / Code / Connections tabs ───────────────────────────── */}
         <div
-          className={`flex flex-shrink-0 min-w-0 overflow-hidden bg-kumo-base ${workspaceTransitionClass}`}
+          className={`workspace-detail-pane flex flex-shrink-0 min-w-0 overflow-hidden bg-kumo-base ${workspaceTransitionClass}`}
           style={{
             width: showFullEditor ? `calc(100% - ${chatWidth}px - 1px)` : 0,
             opacity: showFullEditor ? 1 : 0,
@@ -1551,7 +1569,7 @@ export default function GadgetEditor() {
         >
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <div
-            className="flex items-center gap-2 border-b border-kumo-line px-3 flex-shrink-0"
+            className="flex items-center gap-1 border-b border-kumo-line px-2 flex-shrink-0 sm:gap-2 sm:px-3"
             style={{ height: TABBAR_H }}
           >
             <div className="flex min-w-0 flex-1 items-center overflow-hidden">
@@ -1595,12 +1613,14 @@ export default function GadgetEditor() {
               </div>
 
               {!paneShowsActivity && (
-                <GadgetExportMenu
-                  gadget={selectedGadgetStub}
-                  gadgetTitle={selectedGadgetSummary?.title ?? 'Gadget'}
-                  chatId={previewChatId}
-                  disabled={activeTab !== 'app' || previewMode}
-                />
+                <div className="hidden sm:block">
+                  <GadgetExportMenu
+                    gadget={selectedGadgetStub}
+                    gadgetTitle={selectedGadgetSummary?.title ?? 'Gadget'}
+                    chatId={previewChatId}
+                    disabled={activeTab !== 'app' || previewMode}
+                  />
+                </div>
               )}
 
               {!paneShowsActivity && (
@@ -1722,18 +1742,20 @@ export default function GadgetEditor() {
         </div>
 
         {showOutputRail && (
-          <WorkpiecePicker
-            gadgets={allGadgets}
-            selectedId={null}
-            agentEditingId={streamingActiveFile?.workpieceId ?? null}
-            hookedGadgetIds={hookedGadgetIds}
-            expanded={workpieceRailExpanded}
-            onExpandedChange={handleWorkpieceRailExpandedChange}
-            onSelect={handleSelectWorkpiece}
-            onRename={handleRenameWorkpiece}
-            pendingActivityCount={pendingActionsCount}
-            onOpenActivity={() => openActivity(pendingActionsCount > 0 ? 'review' : 'history')}
-          />
+          <div className="hidden sm:contents">
+            <WorkpiecePicker
+              gadgets={allGadgets}
+              selectedId={null}
+              agentEditingId={streamingActiveFile?.workpieceId ?? null}
+              hookedGadgetIds={hookedGadgetIds}
+              expanded={workpieceRailExpanded}
+              onExpandedChange={handleWorkpieceRailExpandedChange}
+              onSelect={handleSelectWorkpiece}
+              onRename={handleRenameWorkpiece}
+              pendingActivityCount={pendingActionsCount}
+              onOpenActivity={() => openActivity(pendingActionsCount > 0 ? 'review' : 'history')}
+            />
+          </div>
         )}
       </div>
 

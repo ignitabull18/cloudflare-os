@@ -826,3 +826,21 @@ html {
 body:has([role="dialog"], [role="alertdialog"]) .app-header {
   z-index: 0;
 }
+
+/* A desktop split pane cannot shrink gracefully to a phone: the minimum 280px chat column left
+   the gadget canvas roughly 100px wide. On mobile, make the persisted workspace view a true
+   single-pane switch. The existing close/open controls move between chat and the detail pane. */
+@media (max-width: 767px) {
+  .workspace-editor-body[data-mobile-pane="detail"] .workspace-chat-pane,
+  .workspace-editor-body[data-mobile-pane="chat"] .workspace-detail-pane,
+  .workspace-resize-handle {
+    display: none;
+  }
+
+  .workspace-editor-body[data-mobile-pane="chat"] .workspace-chat-pane,
+  .workspace-editor-body[data-mobile-pane="detail"] .workspace-detail-pane {
+    width: 100% !important;
+    opacity: 1 !important;
+    border-right: 0;
+  }
+}
