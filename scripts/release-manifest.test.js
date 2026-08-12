@@ -161,6 +161,14 @@ test("worker entries carry the deploy contract", () => {
         namespace_id: "$KV_CONTEXT_COLLECTIONS_ID" });
   assert.deepEqual(context.inputs, []);
 
+  // gatekeeper-ai-search binds the account's default AI Search namespace directly and requires
+  // no OAuth-app credentials.
+  const aiSearch = workers["gatekeeper-ai-search"];
+  assert.deepEqual(
+      aiSearch.bindings.find((b) => b.name === "AI_SEARCH"),
+      { type: "ai_search_namespace", name: "AI_SEARCH", namespace: "default" });
+  assert.deepEqual(aiSearch.inputs, []);
+
   // Module blobs are content-addressed.
   for (const [name, entry] of Object.entries(workers)) {
     assert.ok(entry.modules.some((m) => m.name === entry.mainModule),

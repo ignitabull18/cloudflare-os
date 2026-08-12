@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gatekeeper-ai-search",
+  "main": ".wrangler/validate/src/index.ts",
+  "build": {
+    "command": "pnpm exec capnweb-validate build --out .wrangler/validate",
+    "watch_dir": "src"
+  },
+  "compatibility_date": "2026-02-02",
+  "compatibility_flags": ["nodejs_compat", "allow_irrevocable_stub_storage"],
+  "rules": [{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": false }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["AiSearchGatekeeper"] }
+  ],
+  "ai_search_namespaces": [
+    { "binding": "AI_SEARCH", "namespace": "default", "remote": true }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "logs": { "invocation_logs": false }
+  }
+}

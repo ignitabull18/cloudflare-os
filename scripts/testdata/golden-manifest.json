@@ -18,6 +18,52 @@
   "manifestVersion": 2,
   "releaseId": "r000000-fixture",
   "workers": {
+    "gatekeeper-ai-search": {
+      "bindings": [
+        {
+          "name": "AI_SEARCH",
+          "namespace": "default",
+          "type": "ai_search_namespace"
+        }
+      ],
+      "compatibilityDate": "2026-02-02",
+      "compatibilityFlags": [
+        "nodejs_compat",
+        "allow_irrevocable_stub_storage"
+      ],
+      "inputs": [],
+      "installable": true,
+      "kind": "gatekeeper",
+      "mainModule": "ai-search.js",
+      "migrations": [
+        {
+          "new_sqlite_classes": [
+            "AiSearchGatekeeper"
+          ],
+          "tag": "v1"
+        }
+      ],
+      "modules": [
+        {
+          "name": "ai-search.js",
+          "r2Key": "blobs/modules/aaa86d7725930159ebf85eb9298946bcc3f465de8304169aa932a4245a4ca91e",
+          "sha256": "aaa86d7725930159ebf85eb9298946bcc3f465de8304169aa932a4245a4ca91e",
+          "size": 62,
+          "type": "esm"
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+          "invocation_logs": false
+        }
+      },
+      "shortName": "ai-search",
+      "vars": {
+        "BASE_URL": "$PUBLIC_BASE_URL/gatekeeper/ai-search"
+      }
+    },
     "gatekeeper-cloudflare": {
       "bindings": [
         {

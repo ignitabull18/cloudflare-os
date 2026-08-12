@@ -32,6 +32,8 @@ const HANDLED_CONFIG_KEYS = new Set([
   // Browser Rendering (Gadget PDF exports). Unlike artifacts it is generally available, so it
   // passes through to customer instances as a placeholder-free binding, like the AI binding.
   "browser",
+  // AI Search namespace bindings carry deployment-scoped capability without an API token.
+  "ai_search_namespaces",
   // gatekeeper-context's Artifacts binding is closed-beta and cannot be provisioned in arbitrary
   // user accounts; it is dropped from customer manifests (the gatekeeper degrades gracefully).
   "artifacts",
@@ -43,6 +45,7 @@ const ARTIFACTS_CUT_ALLOWED = new Set(["gatekeeper-context"]);
 // defaults to CLIENT_ID/CLIENT_SECRET secret inputs (overridable via deploy-inputs.json).
 const NO_DEFAULT_CRED_INPUTS = new Set([
   "gatekeeper-context",       // no third-party service; uses its own storage
+  "gatekeeper-ai-search",     // auto-provisioned; uses the deployment's AI Search namespace
   "gatekeeper-homeassistant", // users connect their own Home Assistant URL + token in-app
   "gatekeeper-scheduler",     // auto-provisioned; no third-party OAuth app
   "gatekeeper-mcp",           // MCP OAuth uses dynamic client registration, not a static app
@@ -143,6 +146,13 @@ export function buildWorkerEntry({ pkgName, config, mainModule, modules, deployI
   if (config.browser) {
     // `remote` is dev-only wrangler behavior; the deployed binding is just { type, name }.
     bindings.push({ type: "browser", name: config.browser.binding });
+  }
+  for (const aiSearch of config.ai_search_namespaces ?? []) {
+    bindings.push({
+      type: "ai_search_namespace",
+      name: aiSearch.binding,
+      namespace: aiSearch.namespace,
+    });
   }
   for (const loader of config.worker_loaders ?? []) {
     bindings.push({ type: "worker_loader", name: loader.binding });

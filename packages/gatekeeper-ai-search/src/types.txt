@@ -1,0 +1,26 @@
+/** A private, account-scoped library backed by Cloudflare AI Search. */
+interface AiSearchLibrary {
+  /** Search indexed documents. Each call records an observation. */
+  search(query: string, options?: SearchOptions): Promise<SearchMatch[]>;
+  /** Generate an answer grounded in indexed documents. Each call records an observation. */
+  answer(question: string, options?: SearchOptions): Promise<SearchAnswer>;
+}
+
+interface SearchOptions {
+  /** Maximum matching chunks. Defaults to 8 and is capped at 20. */
+  limit?: number;
+  /** Minimum relevance score from zero to one. */
+  threshold?: number;
+}
+
+interface SearchMatch {
+  id: string;
+  source: string;
+  score: number;
+  text: string;
+}
+
+interface SearchAnswer {
+  text: string;
+  sources: SearchMatch[];
+}

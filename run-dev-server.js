@@ -6,6 +6,8 @@
 // Flags:
 //   --use-workers-ai-binding   Include the Workers AI binding in
 //                               workshop-backend (requires Cloudflare login).
+//   --use-ai-search-binding    Include the remote-only AI Search gatekeeper
+//                               (requires Cloudflare login).
 //
 // Env:
 //   VITE_BACKEND_HOST=localhost:9000  Also pass --port 9000 to wrangler dev.
@@ -44,6 +46,7 @@ function loadDevVars() {
 loadDevVars();
 
 const useWorkersAi = process.argv.includes("--use-workers-ai-binding");
+const useAiSearch = process.argv.includes("--use-ai-search-binding");
 
 // Generate the format blueprint module before Wrangler tries to bundle the backend. The output is
 // gitignored, so it will not exist on a clean checkout.
@@ -78,7 +81,10 @@ function findGatekeepers(parentDir) {
   }
 }
 
-const gatekeepers = findGatekeepers(PACKAGES_DIR);
+const gatekeepers = findGatekeepers(PACKAGES_DIR)
+    // AI Search has no local simulator. Keep ordinary offline development working and opt into
+    // its remote binding explicitly when testing this gatekeeper.
+    .filter(gk => gk.name !== "gatekeeper-ai-search" || useAiSearch);
 
 // The Context Library (packages/gatekeeper-context) is discovered by findGatekeepers and bound
 // like any other gatekeeper (GATEKEEPER_CONTEXT -> GatekeeperVendor). Its describe() reports
