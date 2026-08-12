@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- App icons must be full-bleed; iOS applies the device-appropriate corner mask. -->
+  <rect width="1024" height="1024" fill="#111827"/>
+  <path d="M512 190 781 345v334L512 834 243 679V345L512 190Z"
+        fill="none" stroke="#ff4801" stroke-width="88" stroke-linejoin="round"/>
+</svg>
