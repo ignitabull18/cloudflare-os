@@ -309,10 +309,13 @@ export class GatekeeperUserImpl
     // here rather than only in the form that normally builds these URLs.
     const scope = parseToolScope(requested);
     requirePortalServerScope(scope);
-    const [catalog, portalServers] = await Promise.all([
-      fetchTools(this.env, this.#account(), server.endpoint),
-      fetchPortalServers(this.env, this.#account(), server.endpoint),
-    ]);
+    // Both operations share the account's persisted MCP transport session. Some portals serialize
+    // requests within a session, so issuing these concurrently can leave both waiting forever.
+    // Keep the calls ordered; this path mints authority and is not latency-sensitive enough to
+    // justify racing session state.
+    const account = this.#account();
+    const portalServers = await fetchPortalServers(this.env, account, server.endpoint);
+    const catalog = await fetchTools(this.env, account, server.endpoint);
     const upstream = validateToolScopeAgainstCatalog(
       scope,
       catalog,
