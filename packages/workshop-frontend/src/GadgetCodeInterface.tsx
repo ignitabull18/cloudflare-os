@@ -1,6 +1,6 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
-import { DownloadSimple } from '@phosphor-icons/react'
+import { DownloadSimple, FolderOpen } from '@phosphor-icons/react'
 import { Overseer, CodeSubscriber, CodeUpdate } from '@gadgets/workshop-shared/api'
 import { RpcStub, RpcTarget } from 'capnweb'
 import * as Y from 'yjs'
@@ -157,6 +157,7 @@ export default function GadgetCodeInterface({ overseer, filesRoot, height = '100
   // React state for UI
   const [fileNames, setFileNames] = useState<string[]>([])
   const [activeFile, setActiveFile] = useState<string | null>(null)
+  const [mobilePane, setMobilePane] = useState<'files' | 'editor'>('editor')
   const fileSidebarRef = useRef<FileSidebarHandle | null>(null)
   const [isReady, setIsReady] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -707,6 +708,7 @@ export default function GadgetCodeInterface({ overseer, filesRoot, height = '100
       hasUserSwitchedFilesThisTurnRef.current = true
     }
     setActiveFile(filename)
+    setMobilePane('editor')
   }
 
   // Handle file creation
@@ -852,7 +854,10 @@ export default function GadgetCodeInterface({ overseer, filesRoot, height = '100
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height, width: '100%' }}>
+    <div
+      data-mobile-code-pane={mobilePane}
+      style={{ display: 'flex', flexDirection: 'column', height, width: '100%' }}
+    >
       {hasUnsavedChanges && (
         <div className="bg-kumo-tint border-b border-kumo-line px-4 py-2 flex items-center gap-2 text-sm text-kumo-warning">
           <span className="text-base">&#9888;&#65039;</span>
@@ -860,27 +865,40 @@ export default function GadgetCodeInterface({ overseer, filesRoot, height = '100
         </div>
       )}
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <FileSidebar
-          ref={fileSidebarRef}
-          files={displayedFiles}
-          activeFile={activeFile}
-          streamingActiveFile={streamingActiveFile}
-          dirtyFiles={new Set()}
-          changedFiles={changedFiles}
-          fileChangeStatuses={fileChangeStatuses}
-          isDiffMode={isDiffMode}
-          editLocked={isEditingLocked}
-          onFileSelect={handleFileSelect}
-          onFileCreate={handleFileCreate}
-          onFileDelete={handleFileDelete}
-          onFileRename={handleFileRename}
-          onFileDownload={handleFileDownload}
-        />
-        <div className="flex flex-col bg-kumo-base" style={{ flex: 1, minWidth: 0 }}>
+        <div className="gadget-code-files h-full">
+          <FileSidebar
+            ref={fileSidebarRef}
+            files={displayedFiles}
+            activeFile={activeFile}
+            streamingActiveFile={streamingActiveFile}
+            dirtyFiles={new Set()}
+            changedFiles={changedFiles}
+            fileChangeStatuses={fileChangeStatuses}
+            isDiffMode={isDiffMode}
+            editLocked={isEditingLocked}
+            onFileSelect={handleFileSelect}
+            onFileCreate={handleFileCreate}
+            onFileDelete={handleFileDelete}
+            onFileRename={handleFileRename}
+            onFileDownload={handleFileDownload}
+          />
+        </div>
+        <div className="gadget-code-editor flex flex-col bg-kumo-base" style={{ flex: 1, minWidth: 0 }}>
           {activeFile && (
             <div className="flex h-9 shrink-0 items-center justify-between gap-3 border-b border-kumo-line bg-kumo-base px-3">
-              <div className="min-w-0 text-[12px] leading-4 tracking-[-0.2px] text-kumo-subtle">
-                {activeFileModeLabel} <span className="font-mono font-medium text-kumo-default">{activeFile}</span>
+              <div className="flex min-w-0 items-center gap-2 text-[12px] leading-4 tracking-[-0.2px] text-kumo-subtle">
+                <button
+                  type="button"
+                  className="flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-kumo-default hover:bg-kumo-tint sm:hidden"
+                  onClick={() => setMobilePane('files')}
+                >
+                  <FolderOpen size={15} />
+                  Files
+                </button>
+                <span className="min-w-0 truncate">
+                  <span className="hidden sm:inline">{activeFileModeLabel} </span>
+                  <span className="font-mono font-medium text-kumo-default">{activeFile}</span>
+                </span>
               </div>
               <WorkshopIconButton
                 aria-label={`Download ${activeFile}`}

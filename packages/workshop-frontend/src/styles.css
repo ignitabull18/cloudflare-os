@@ -843,4 +843,15 @@ body:has([role="dialog"], [role="alertdialog"]) .app-header {
     opacity: 1 !important;
     border-right: 0;
   }
+
+  [data-mobile-code-pane="editor"] .gadget-code-files,
+  [data-mobile-code-pane="files"] .gadget-code-editor {
+    display: none;
+  }
+
+  [data-mobile-code-pane="files"] .gadget-code-files,
+  [data-mobile-code-pane="files"] .gadget-code-files > div,
+  [data-mobile-code-pane="editor"] .gadget-code-editor {
+    width: 100% !important;
+  }
 }

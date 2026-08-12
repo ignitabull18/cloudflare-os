@@ -310,7 +310,7 @@ function PaneTab({
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-medium tracking-[-0.15px] transition-colors duration-150 ${
+      className={`relative flex min-h-10 cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-[12.5px] font-medium tracking-[-0.15px] transition-colors duration-150 sm:min-h-0 ${
         active ? 'bg-kumo-tint text-kumo-default' : 'text-kumo-subtle hover:text-kumo-default'
       }`}
     >
@@ -1572,7 +1572,7 @@ export default function GadgetEditor() {
             className="flex items-center gap-1 border-b border-kumo-line px-2 flex-shrink-0 sm:gap-2 sm:px-3"
             style={{ height: TABBAR_H }}
           >
-            <div className="flex min-w-0 flex-1 items-center overflow-hidden">
+            <div className="hidden min-w-0 flex-1 items-center overflow-hidden sm:flex">
               {paneShowsActivity ? (
                 <PaneLabel icon={Pulse} title="Activity" />
               ) : visibleGadgets.length > 1 ? (
@@ -1631,6 +1631,7 @@ export default function GadgetEditor() {
                     : `Full screen is available in ${formatOf(selectedGadgetSummary?.output).noun} view`}
                   onClick={enterGadgetFullscreen}
                   disabled={activeTab !== 'app' || previewMode}
+                  className="hidden sm:flex"
                 >
                   <ArrowsOutSimple size={17} />
                 </WorkshopIconButton>

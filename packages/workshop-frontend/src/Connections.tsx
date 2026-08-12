@@ -219,7 +219,7 @@ export default function Connections({ overseer, gadget, chatId, authenticatedApi
           ) : bindings.length === 0 ? (
             <EmptyState
               title="No connected resources"
-              description="Connect Google Docs, GitHub, Google Sheets, and other services so this gadget can safely use external data."
+              description="Choose from the connection types currently available in this Cloudflare OS deployment. External services appear after their Gatekeepers are installed and connected."
               actionLabel="Connect resource"
               onAction={() => setIsNewConnectionModalVisible(true)}
             />
