@@ -60,10 +60,10 @@ export default {
   },
 
   async email(message, env) {
-    if (!env.GATEKEEPER_EMAIL) {
-      message.setReject("No email gatekeeper is installed on this instance.");
-      return;
-    }
-    await env.GATEKEEPER_EMAIL.email(message);
+    // ForwardableEmailMessage is a native runtime object and cannot cross a Worker service
+    // binding. Production Email Routing must target the gatekeeper-email Worker directly; keep a
+    // clear failure here so a route accidentally aimed at the public router does not surface an
+    // opaque DataCloneError.
+    message.setReject("Email Routing must target the installed email gatekeeper Worker directly.");
   },
 } satisfies ExportedHandler<Env>;

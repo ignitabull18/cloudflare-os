@@ -83,24 +83,16 @@ describe('router fetch', () => {
 });
 
 describe('router email', () => {
-  it('forwards to GATEKEEPER_EMAIL when bound', async () => {
-    const received: unknown[] = [];
-    const env = makeEnv({
-      GATEKEEPER_EMAIL: { email: async (m: unknown) => { received.push(m); } },
-    });
-    const message = {} as ForwardableEmailMessage;
-    await router.email!(message, env, {} as ExecutionContext);
-    expect(received).toEqual([message]);
-  });
-
-  it('rejects mail when no email gatekeeper is installed', async () => {
+  it('rejects mail with direct-routing guidance', async () => {
     const rejections: string[] = [];
     const env = makeEnv();
     const message = {
       setReject: (reason: string) => { rejections.push(reason); },
     } as unknown as ForwardableEmailMessage;
     await router.email!(message, env, {} as ExecutionContext);
-    expect(rejections).toHaveLength(1);
+    expect(rejections).toEqual([
+      'Email Routing must target the installed email gatekeeper Worker directly.',
+    ]);
   });
 });
 
