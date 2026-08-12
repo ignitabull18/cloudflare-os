@@ -270,26 +270,36 @@ export class UserAccount extends DurableObject<Env> {
     }
 
     const tokens = await exchangeCode(this.#config(), code, stored.verifier);
-    if (!tokens || !tokens.refreshToken) {
-      throw new Error("Cloudflare OAuth exchange failed or returned no refresh token.");
-    }
+    if (!tokens) throw new Error("Cloudflare OAuth exchange failed.");
 
-    this.ctx.storage.kv.put<string>("refreshToken", tokens.refreshToken);
+    if (tokens.refreshToken) {
+      this.ctx.storage.kv.put<string>("refreshToken", tokens.refreshToken);
+    } else {
+      // Cloudflare self-managed OAuth clients currently issue access-token-only grants. Keep
+      // supporting refresh tokens if the provider adds them, but do not reject a valid grant.
+      this.ctx.storage.kv.delete("refreshToken");
+    }
     this.ctx.storage.kv.put<string[]>("authorizedScopes", this.ctx.storage.kv.get<string[]>("scopes") ?? FULL_SCOPES);
+    const accessTokenExpires = Date.now() + tokens.expiresIn * 1000;
     this.ctx.storage.kv.put<StoredAccessToken>("accessToken", {
       token: tokens.accessToken,
-      expires: Date.now() + tokens.expiresIn * 1000,
+      expires: accessTokenExpires,
     });
+    const credentialExpiry = tokens.refreshToken ? undefined : new Date(accessTokenExpires);
 
     const reconnecting = this.ctx.storage.kv.get<boolean>("reconnecting");
     if (reconnecting) {
       this.ctx.storage.kv.delete("reconnecting");
-      await callback.credentialsRestored();
+      await callback.credentialsRestored(credentialExpiry);
     } else {
       try {
-        await callback.complete(this.ctx.exports.GatekeeperUserImpl({ props: { userObjectId: this.ctx.id.toString() } }));
+        await callback.complete(
+          this.ctx.exports.GatekeeperUserImpl({ props: { userObjectId: this.ctx.id.toString() } }),
+          credentialExpiry,
+        );
       } catch (err) {
         this.ctx.storage.kv.delete("refreshToken");
+        this.ctx.storage.kv.delete("accessToken");
         throw err;
       }
       // Auth-only sign-in grants are transient: the caller read the email via complete(), so
@@ -297,13 +307,17 @@ export class UserAccount extends DurableObject<Env> {
       // our local copy.
       if (this.ctx.storage.kv.get<boolean>("ephemeral")) {
         this.ctx.storage.setAlarm(Date.now() + 2 * 60 * 1000);
+      } else {
+        this.ctx.storage.deleteAlarm();
       }
     }
     return true;
   }
 
-  hasRefreshToken() {
-    return this.ctx.storage.kv.get<string>("refreshToken") !== undefined;
+  hasCredentials() {
+    const cached = this.ctx.storage.kv.get<StoredAccessToken>("accessToken");
+    return this.ctx.storage.kv.get<string>("refreshToken") !== undefined ||
+      (cached !== undefined && cached.expires > Date.now());
   }
 
   hasFullScopes(): boolean {
@@ -314,12 +328,19 @@ export class UserAccount extends DurableObject<Env> {
   // Returns a usable access token (refreshing if needed), or null if the credentials are gone or
   // can no longer be refreshed (in which case the workshop is notified via credentialsExpired()).
   async getAccessToken(): Promise<string | null> {
-    const refreshToken = this.ctx.storage.kv.get<string>("refreshToken");
-    if (!refreshToken) return null;
-
     const cached = this.ctx.storage.kv.get<StoredAccessToken>("accessToken");
     if (cached && cached.expires > Date.now() + ACCESS_TOKEN_EXPIRY_SAFETY_MS) {
       return cached.token;
+    }
+
+    const refreshToken = this.ctx.storage.kv.get<string>("refreshToken");
+    if (!refreshToken) {
+      const callback = this.ctx.storage.kv.get<Fetcher<GatekeeperConnectCallback>>("callback");
+      callback?.credentialsExpired().catch(err =>
+        logger.warn("failed to notify credential expiry", {
+          event: "credentials.expiry.notify.failed", error: err,
+        }));
+      return null;
     }
 
     const refreshed = await refreshTokens(this.#config(), refreshToken);
@@ -345,7 +366,7 @@ export class UserAccount extends DurableObject<Env> {
   async alarm(): Promise<void> {
     // Drop the account if the flow never completed, or if this was a transient auth-only sign-in
     // grant (used once to read the email for login).
-    if (!this.hasRefreshToken() || this.ctx.storage.kv.get<boolean>("ephemeral")) {
+    if (!this.hasCredentials() || this.ctx.storage.kv.get<boolean>("ephemeral")) {
       this.ctx.storage.deleteAll();
     }
   }
