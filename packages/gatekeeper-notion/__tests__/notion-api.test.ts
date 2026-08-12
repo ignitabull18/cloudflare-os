@@ -1,11 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   blocksToMarkdown,
+  exchangeAuthCode,
   markdownToBlocks,
   parseNotionId,
   propertyValueToInput,
   type BlockWithChildren,
 } from "../src/notion-api";
+
+describe("Notion OAuth", () => {
+  it("UTF-8 encodes OAuth credentials before creating the Basic authorization header", async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(new Headers(init?.headers).get("Authorization"))
+        .toBe("Basic Y2xpZW50OnPDq2NyZXTwn5SQ");
+      return new Response(JSON.stringify({ access_token: "token" }), {
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    try {
+      await expect(exchangeAuthCode(
+        "code", "client", "sëcret🔐", "https://example.com/oauth",
+      )).resolves.toMatchObject({ accessToken: "token" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
 
 function paragraph(richText: unknown[]): BlockWithChildren {
   return { block: { id: "b", type: "paragraph", paragraph: { rich_text: richText } } as any };

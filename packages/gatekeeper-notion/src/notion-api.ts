@@ -75,6 +75,13 @@ type NotionTokenResponse = {
   error_description?: string;
 };
 
+function basicAuth(clientId: string, clientSecret: string): string {
+  const bytes = new TextEncoder().encode(`${clientId}:${clientSecret}`);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return `Basic ${btoa(binary)}`;
+}
+
 async function postToken(
   body: Record<string, string>,
   clientId: string,
@@ -86,7 +93,7 @@ async function postToken(
       Accept: "application/json",
       "Content-Type": "application/json",
       "Notion-Version": NOTION_VERSION,
-      Authorization: `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      Authorization: basicAuth(clientId, clientSecret),
     },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
