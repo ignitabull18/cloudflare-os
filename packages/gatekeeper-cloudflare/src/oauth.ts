@@ -12,7 +12,6 @@ const CF_OAUTH_TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
 // client isn't permitted it; identity comes from user-details.read (the /user API). offline_access
 // yields a refresh token; account-settings.read is required to enumerate the user's account(s).
 export const FULL_SCOPES = [
-  "offline_access",
   "aig.read",
   "aig.run",
   "workers-scripts.read",
@@ -25,7 +24,6 @@ export const FULL_SCOPES = [
 // Minimal scopes for sign-in only: a refresh token + the /user identity read. Used in "auth" mode
 // (the resulting grant is transient).
 export const AUTH_SCOPES = [
-  "offline_access",
   "user-details.read",
 ];
 
