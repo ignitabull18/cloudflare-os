@@ -1,15 +1,26 @@
-import { WorkerEntrypoint, DurableObject } from "cloudflare:workers";
+import { WorkerEntrypoint, DurableObject, RpcStub, RpcTarget } from "cloudflare:workers";
 import { skipRpcValidation, validateRpc } from "capnweb-validate";
 import {
   GatekeeperVendor as GatekeeperVendorIface, Gatekeeper, GatekeeperUserVerifier, VendorDescription,
   GatekeeperConnectCallback, GatekeeperConnectOptions, AccountDescription,
-  SupportedResource, ResourceConfiguratorFrame, stripTrailingSlashes,
+  SupportedResource, ResourceConfiguratorFrame, ResourceDescription, ApprovalQueue,
+  stripTrailingSlashes,
 } from "@gadgets/workshop-shared/gatekeeper";
 import { CloudflareGatekeeperUser } from "@gadgets/workshop-shared/cloudflare-gatekeeper";
 import { getOAuthConfig, buildAuthorizeUrl, generatePkce, exchangeCode, refreshTokens, AUTH_SCOPES, FULL_SCOPES } from "./oauth";
-import { fetchIdentity } from "./cloudflare-api";
+import { CloudflareApi, CloudflareApiError, fetchIdentity } from "./cloudflare-api";
+import { CloudflareAccountConfiguratorUI } from "./cloudflare-configurator.js";
+import type {
+  CloudflareAccount as CloudflareAccountSession,
+  CloudflareAccountMetadata,
+  CloudflareAiGatewaySummary,
+  CloudflareKvNamespaceSummary,
+  CloudflareR2BucketSummary,
+  CloudflareWorkerSummary,
+} from "./types";
 import { VENDOR_ID } from "./vendor.js";
 import TYPES_CODE from "./types.txt";
+import CLOUDFLARE_ACCOUNT_CONFIGURATOR_HTML from "./generated/cloudflare-account-configurator-ui.txt";
 import { obsContext } from "./observability.js";
 
 const logger = obsContext.createLogger({
@@ -42,6 +53,15 @@ const CLOUDFLARE_LOGO_URL = "data:image/svg+xml," + encodeURIComponent(
   `<path fill="#f9ab41" d="M168.22,41.15q-1,0-2.1.06a.88.88,0,0,0-.32.07,1.17,1.17,0,0,0-.76.8l-3,10.26c-1.28,4.41-.81,8.48,1.34,11.48a11.65,11.65,0,0,0,9.24,4.57l16.11,1a1.44,1.44,0,0,1,1.14.62,1.5,1.5,0,0,1,.17,1.37,2,2,0,0,1-1.75,1.34l-16.73,1c-9.09.42-18.88,7.75-22.31,16.7l-1.21,3.16a.9.9,0,0,0,.79,1.22h57.63A1.55,1.55,0,0,0,208,93.63a41.34,41.34,0,0,0-39.76-52.48Z"/>` +
   `</svg>`,
 );
+
+const ACCOUNT_RESOURCE: SupportedResource = {
+  urlPattern: "https://dash.cloudflare.com/:accountId",
+  title: "Cloudflare Account",
+  description: "Read the Workers, AI Gateways, R2 buckets, and KV namespaces in one Cloudflare account.",
+  icon: { url: CLOUDFLARE_LOGO_URL },
+};
+
+const SUPPORTED_RESOURCES = [ACCOUNT_RESOURCE];
 
 function hexEncode(bytes: Uint8Array): string {
   return [...bytes].map(b => b.toString(16).padStart(2, "0")).join("");
@@ -154,10 +174,10 @@ export class GatekeeperVendor extends WorkerEntrypoint<Env> implements Gatekeepe
       url: "https://cloudflare.com",
       logo: { url: CLOUDFLARE_LOGO_URL },
       color: "#fbece0",
-      tagline: "Sign in with Cloudflare",
+      tagline: "Inspect Workers, AI Gateway, R2, and KV",
       description:
-          "Sign in with your Cloudflare account. Usage beyond the free tier can be billed to your " +
-          "own Cloudflare AI Gateway credits.",
+          "Connect Cloudflare to inspect one account's developer-platform inventory with a " +
+          "read-only workspace capability.",
       providesAuth: true,
     };
   }
@@ -173,9 +193,8 @@ export class GatekeeperVendor extends WorkerEntrypoint<Env> implements Gatekeepe
     return { url: `${getBaseUrl(this.env)}/${userObjectId.toString()}/${initiationNonce}` };
   }
 
-  // No gadget/agent resource types yet — the Cloudflare gatekeeper currently provides auth only.
   async getSupportedResources(): Promise<SupportedResource[]> {
-    return [];
+    return SUPPORTED_RESOURCES;
   }
 
   async getTypeScriptTypes(): Promise<string> {
@@ -209,6 +228,7 @@ export class UserAccount extends DurableObject<Env> {
 
   async prepareReconnect(initiationNonce: string) {
     this.ctx.storage.kv.put<boolean>("reconnecting", true);
+    this.ctx.storage.kv.put<string[]>("scopes", FULL_SCOPES);
     this.ctx.storage.kv.put<StoredNonce>("nonce", {
       value: initiationNonce,
       expiresAt: Date.now() + INITIATION_NONCE_LIFETIME_MS,
@@ -255,6 +275,7 @@ export class UserAccount extends DurableObject<Env> {
     }
 
     this.ctx.storage.kv.put<string>("refreshToken", tokens.refreshToken);
+    this.ctx.storage.kv.put<string[]>("authorizedScopes", this.ctx.storage.kv.get<string[]>("scopes") ?? FULL_SCOPES);
     this.ctx.storage.kv.put<StoredAccessToken>("accessToken", {
       token: tokens.accessToken,
       expires: Date.now() + tokens.expiresIn * 1000,
@@ -283,6 +304,11 @@ export class UserAccount extends DurableObject<Env> {
 
   hasRefreshToken() {
     return this.ctx.storage.kv.get<string>("refreshToken") !== undefined;
+  }
+
+  hasFullScopes(): boolean {
+    const authorized = new Set(this.ctx.storage.kv.get<string[]>("authorizedScopes") ?? []);
+    return FULL_SCOPES.every(scope => authorized.has(scope));
   }
 
   // Returns a usable access token (refreshing if needed), or null if the credentials are gone or
@@ -357,8 +383,10 @@ export class GatekeeperUserImpl extends WorkerEntrypoint<Env, GatekeeperUserImpl
     return identity?.email ?? null;
   }
 
-  async ensureResources(_resourceUrlPatterns: string[]): Promise<{url?: string}> {
-    return {};
+  async ensureResources(resourceUrlPatterns: string[]): Promise<{url?: string}> {
+    if (!resourceUrlPatterns.includes(ACCOUNT_RESOURCE.urlPattern) ||
+        await this.#account().hasFullScopes()) return {};
+    return await this.reconnect();
   }
 
   async getUsableAccessToken(): Promise<string | null> {
@@ -366,18 +394,42 @@ export class GatekeeperUserImpl extends WorkerEntrypoint<Env, GatekeeperUserImpl
   }
 
   async getSupportedResources(): Promise<SupportedResource[]> {
-    return [];
+    return SUPPORTED_RESOURCES;
   }
 
-  async getGatekeeperClassFor(_url: string): Promise<{
-    class: DurableObjectClass<Gatekeeper<any>>;
+  async getGatekeeperClassFor(url: string): Promise<{
+    class: DurableObjectClass<Gatekeeper<CloudflareAccountSession>>;
     resource: SupportedResource;
   }> {
-    throw new Error("The Cloudflare gatekeeper does not provide any resources yet.");
+    const parsed = new URL(url);
+    const [accountId, ...rest] = parsed.pathname.split("/").filter(Boolean);
+    if (parsed.hostname !== "dash.cloudflare.com" || rest.length > 0 ||
+        !accountId || !/^[a-f0-9]{32}$/i.test(accountId)) {
+      throw new Error(`Unsupported Cloudflare account URL: ${url}`);
+    }
+    const props: CloudflareAccountGatekeeperProps = {
+      userObjectId: this.ctx.props.userObjectId,
+      accountId,
+    };
+    return {
+      class: this.ctx.exports.CloudflareAccountGatekeeper({ props }),
+      resource: ACCOUNT_RESOURCE,
+    };
   }
 
-  async startResourceConfigurator(_resourceUrlPattern: string): Promise<ResourceConfiguratorFrame> {
-    throw new Error("The Cloudflare gatekeeper does not provide any resources yet.");
+  async startResourceConfigurator(resourceUrlPattern: string): Promise<ResourceConfiguratorFrame> {
+    if (resourceUrlPattern !== ACCOUNT_RESOURCE.urlPattern) {
+      throw new Error(`Unsupported Cloudflare resource configurator type: ${resourceUrlPattern}`);
+    }
+    const getToken = async () => {
+      const token = await this.#account().getAccessToken();
+      if (!token) throw new Error("Cloudflare credentials have expired. Please reconnect the account.");
+      return token;
+    };
+    return {
+      iframeHtml: CLOUDFLARE_ACCOUNT_CONFIGURATOR_HTML,
+      ui: new RpcStub(new CloudflareAccountConfiguratorUI(getToken)),
+    };
   }
 
   async revoke(): Promise<void> {
@@ -390,18 +442,147 @@ export class GatekeeperUserImpl extends WorkerEntrypoint<Env, GatekeeperUserImpl
     return { url: `${getBaseUrl(this.env)}/${this.ctx.props.userObjectId}/${initiationNonce}` };
   }
 
-  // Mint a verifier representing this account. The Cloudflare gatekeeper currently exposes no
-  // resource bindings (getGatekeeperClassFor always throws), so it is never an in-scope binding and
-  // this verifier is never consulted by the observer flow — but getVerifier is part of the
-  // GatekeeperUser contract, so it must exist. Returns a trivial verifier with no identity.
   @skipRpcValidation()
   async getVerifier(): Promise<Fetcher<GatekeeperUserVerifier>> {
-    return this.ctx.exports.CloudflareVerifier({});
+    const props: CloudflareVerifierProps = { userObjectId: this.ctx.props.userObjectId };
+    return this.ctx.exports.CloudflareVerifier({ props });
   }
 }
 
-// The Cloudflare gatekeeper provides no resources, so no observer verification is performed.
+type CloudflareVerifierProps = { userObjectId: string };
+
+export interface CloudflareVerifierApi extends GatekeeperUserVerifier {
+  hasAccountAccess(accountId: string): Promise<boolean>;
+}
+
 @validateRpc()
-export class CloudflareVerifier extends WorkerEntrypoint<Env> implements GatekeeperUserVerifier {
-  verify(): void {}
+export class CloudflareVerifier extends WorkerEntrypoint<Env, CloudflareVerifierProps>
+                                implements CloudflareVerifierApi {
+  async hasAccountAccess(accountId: string): Promise<boolean> {
+    const account = this.ctx.exports.UserAccount.get(
+      this.ctx.exports.UserAccount.idFromString(this.ctx.props.userObjectId));
+    const api = new CloudflareApi(async () => {
+      const token = await account.getAccessToken();
+      if (!token) throw new CloudflareApiError("Cloudflare credentials are unavailable.", 401);
+      return token;
+    });
+    try {
+      await api.getAccount(accountId);
+      return true;
+    } catch (error) {
+      if (error instanceof CloudflareApiError &&
+          (error.status === 401 || error.status === 403 || error.status === 404)) return false;
+      throw error;
+    }
+  }
+}
+
+type CloudflareAccountGatekeeperProps = { userObjectId: string; accountId: string };
+
+@validateRpc()
+export class CloudflareAccountGatekeeper extends DurableObject<Env, CloudflareAccountGatekeeperProps>
+                                         implements Gatekeeper<CloudflareAccountSession> {
+  #account() {
+    return this.ctx.exports.UserAccount.get(
+      this.ctx.exports.UserAccount.idFromString(this.ctx.props.userObjectId));
+  }
+
+  #api(): CloudflareApi {
+    return new CloudflareApi(async () => {
+      const token = await this.#account().getAccessToken();
+      if (!token) throw new Error("Cloudflare credentials have expired. Please reconnect the account.");
+      return token;
+    });
+  }
+
+  async describe(): Promise<ResourceDescription> {
+    const account = await this.#api().getAccount(this.ctx.props.accountId);
+    return {
+      url: `https://dash.cloudflare.com/${account.id}`,
+      title: account.name,
+      snippet: `Cloudflare ${account.type} account`,
+      suggestedBindingName: "CLOUDFLARE_ACCOUNT",
+      tsType: "CloudflareAccount",
+    };
+  }
+
+  async getTypeScriptTypes(): Promise<string> { return TYPES_CODE; }
+  async getAutoApprovableActions() { return []; }
+
+  async startSession(approvalQueue: RpcStub<ApprovalQueue>): Promise<CloudflareAccountSession> {
+    return new CloudflareAccountSessionImpl(this.#api(), this.ctx.props.accountId, approvalQueue.dup());
+  }
+
+  async applyAction(action: number): Promise<void> {
+    throw new Error(`Unknown read-only Cloudflare action: ${action}`);
+  }
+
+  async rejectAction(_action: number): Promise<void> {}
+
+  async revertAction(_action: number): Promise<{ message: string }> {
+    return { message: "This Cloudflare capability is read-only and has no actions to revert." };
+  }
+
+  async addObserver(_id: string, user: Fetcher<GatekeeperUserVerifier>): Promise<void> {
+    const verifier = user as unknown as Fetcher<CloudflareVerifierApi>;
+    if (!await verifier.hasAccountAccess(this.ctx.props.accountId)) {
+      throw new Error(
+        `This collaborator cannot access Cloudflare account ${this.ctx.props.accountId}, so they ` +
+        "cannot observe data this workspace read from it.",
+      );
+    }
+  }
+
+  async removeObserver(_id: string): Promise<void> {}
+}
+
+@validateRpc()
+class CloudflareAccountSessionImpl extends RpcTarget implements CloudflareAccountSession {
+  constructor(
+    private readonly api: CloudflareApi,
+    private readonly accountId: string,
+    private readonly approvalQueue: RpcStub<ApprovalQueue>,
+  ) { super(); }
+
+  [Symbol.dispose](): void { this.approvalQueue[Symbol.dispose](); }
+
+  async getMetadata(): Promise<CloudflareAccountMetadata> {
+    const result = await this.api.getAccount(this.accountId);
+    await this.approvalQueue.authorizeObservation({
+      title: `Read Cloudflare account metadata for ${result.name}`,
+      description: `Read basic metadata for Cloudflare account ${result.id}.`,
+    });
+    return result;
+  }
+
+  async listWorkers(): Promise<CloudflareWorkerSummary[]> {
+    const result = await this.api.listWorkers(this.accountId);
+    await this.#authorizeList("Workers", result.length);
+    return result;
+  }
+
+  async listAiGateways(): Promise<CloudflareAiGatewaySummary[]> {
+    const result = await this.api.listAiGateways(this.accountId);
+    await this.#authorizeList("AI Gateways", result.length);
+    return result;
+  }
+
+  async listR2Buckets(): Promise<CloudflareR2BucketSummary[]> {
+    const result = await this.api.listR2Buckets(this.accountId);
+    await this.#authorizeList("R2 buckets", result.length);
+    return result;
+  }
+
+  async listKvNamespaces(): Promise<CloudflareKvNamespaceSummary[]> {
+    const result = await this.api.listKvNamespaces(this.accountId);
+    await this.#authorizeList("Workers KV namespaces", result.length);
+    return result;
+  }
+
+  async #authorizeList(kind: string, count: number): Promise<void> {
+    await this.approvalQueue.authorizeObservation({
+      title: `List Cloudflare ${kind}`,
+      description: `Read ${count} ${kind} from Cloudflare account ${this.accountId}.`,
+    });
+  }
 }

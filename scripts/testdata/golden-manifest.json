@@ -103,6 +103,12 @@
             "UserAccount"
           ],
           "tag": "v0"
+        },
+        {
+          "new_sqlite_classes": [
+            "CloudflareAccountGatekeeper"
+          ],
+          "tag": "v1"
         }
       ],
       "modules": [

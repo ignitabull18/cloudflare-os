@@ -15,6 +15,9 @@ export const FULL_SCOPES = [
   "offline_access",
   "aig.read",
   "aig.run",
+  "workers-scripts.read",
+  "workers-r2.read",
+  "workers-kv-storage.read",
   "user-details.read",
   "account-settings.read",
 ];
