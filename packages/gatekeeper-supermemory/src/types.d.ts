@@ -239,6 +239,8 @@ export interface SupermemoryConnectionInfo {
   createdAt: string;
   /** Last synchronization status, when available. */
   lastSyncStatus: string | null;
+  /** Authorization URL after a newly created connector is approved, when provider sign-in is required. */
+  authorizationUrl?: string | null;
 }
 
 /** Input for starting a Supermemory connector. */
@@ -317,6 +319,14 @@ export interface SupermemoryScopedKeySecret extends SupermemoryScopedKeyInfo {
   key: string;
 }
 
+/** A scoped-key issuance that can be inspected after it is applied. */
+export interface SupermemoryScopedKeyIssuance {
+  /** Returns current issuance metadata. */
+  getInfo(): Promise<SupermemoryScopedKeyInfo>;
+  /** Returns the newly issued bearer token. The token is available only after issuance succeeds. */
+  revealSecret(): Promise<SupermemoryScopedKeySecret>;
+}
+
 /** Settings visible for the connected Supermemory organization. */
 export interface SupermemoryOrganizationSettings {
   /** Organization-level profile buckets, when configured. */
@@ -387,8 +397,10 @@ export interface SupermemoryOrganization {
   beginConnection(input: SupermemoryConnectionInput): Promise<SupermemoryConnectionSetup>;
   /** Opens a source connector by stable ID. */
   connection(id: string): Promise<SupermemoryConnection>;
-  /** Issues a new container-scoped API key. */
-  issueScopedKey(input: SupermemoryScopedKeyInput): Promise<SupermemoryScopedKeySecret>;
+  /** Starts issuance of a new container-scoped API key and returns its result capability. */
+  issueScopedKey(input: SupermemoryScopedKeyInput): Promise<SupermemoryScopedKeyIssuance>;
+  /** Reopens a scoped-key issuance by the provisional or final ID returned in its metadata. */
+  scopedKeyIssuance(id: string): Promise<SupermemoryScopedKeyIssuance>;
   /** Lists scoped keys previously issued through this gatekeeper. */
   listIssuedScopedKeys(): Promise<SupermemoryScopedKeyInfo[]>;
   /** Revokes a scoped API key without deleting its memories. */

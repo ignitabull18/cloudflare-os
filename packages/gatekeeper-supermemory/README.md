@@ -10,11 +10,13 @@ It exposes two capability granularities:
 - `SupermemoryOrganization` is an explicit administrative binding for creating container-scoped
   keys and managing Supermemory source connectors.
 
-## Development status
+## Security model
 
-Phase 1 implements authentication, typed capabilities, resource configurators, API scoping, and
-release registration. Do not deploy this gatekeeper until phase 2 adds approval-queued actions,
-observation authorization, action simulation, caching where useful, and final observer hardening.
+Every external read is authorized as an observation. Writes are persisted in the gatekeeper's
+Durable Object and submitted to the Workshop approval queue; the Supermemory API is called only
+from `applyAction()`. Pending writes are overlaid on cached reads so agents can continue working
+with provisional memories, documents, connectors, and scoped-key issuances. Bindings are
+private-only because Supermemory API keys do not provide a reliable collaborator ACL oracle.
 
 ## Verification
 
