@@ -951,6 +951,48 @@
         "BASE_URL": "$PUBLIC_BASE_URL/gatekeeper/supabase"
       }
     },
+    "gatekeeper-supermemory": {
+      "bindings": [],
+      "compatibilityDate": "2026-02-02",
+      "compatibilityFlags": [
+        "allow_irrevocable_stub_storage",
+        "nodejs_als"
+      ],
+      "inputs": [],
+      "installable": true,
+      "kind": "gatekeeper",
+      "mainModule": "supermemory.js",
+      "migrations": [
+        {
+          "new_sqlite_classes": [
+            "UserAccount",
+            "SupermemoryContainerGatekeeper",
+            "SupermemoryOrganizationGatekeeper"
+          ],
+          "tag": "v0"
+        }
+      ],
+      "modules": [
+        {
+          "name": "supermemory.js",
+          "r2Key": "blobs/modules/024ab402374ffc3e17f3309da004e5b3342b6fe03e9c58f4ac30ae3fdd6838a3",
+          "sha256": "024ab402374ffc3e17f3309da004e5b3342b6fe03e9c58f4ac30ae3fdd6838a3",
+          "size": 64,
+          "type": "esm"
+        }
+      ],
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1,
+        "logs": {
+          "invocation_logs": false
+        }
+      },
+      "shortName": "supermemory",
+      "vars": {
+        "BASE_URL": "$PUBLIC_BASE_URL/gatekeeper/supermemory"
+      }
+    },
     "gatekeeper-zoominfo": {
       "bindings": [
         {
