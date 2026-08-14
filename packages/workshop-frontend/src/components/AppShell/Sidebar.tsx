@@ -13,6 +13,7 @@ import {
 import { useSiteName } from '../../ServerConfigContext'
 import SiteLogo from '../SiteLogo'
 import { useGatekeeperApps } from '../../useGatekeeperApps'
+import { primaryNavigationGatekeeperApps } from '../../gatekeeperPresentation'
 import { openCommandPalette } from './commandPaletteBus'
 import SidebarItem from './SidebarItem'
 import {
@@ -41,8 +42,8 @@ export default function Sidebar({
 }) {
   const siteName = useSiteName()
   // Gatekeeper-served management apps the user can reach now (one per gatekeeper that provides a UI
-  // and is connected / enabled for everyone). Disabled or not-yet-connected ones aren't returned, so
-  // they simply don't appear. The set is fully dynamic — no gatekeeper is hardcoded.
+  // and is connected / enabled for everyone). Apps choose whether they are also first-class primary
+  // navigation destinations. The set is fully dynamic — no gatekeeper is hardcoded.
   const gatekeeperApps = useGatekeeperApps()
 
   return (
@@ -139,8 +140,8 @@ export default function Sidebar({
               icon={<Stack size={14} weight="regular" />}
               collapsed={collapsed}
             />
-            {/* Gatekeeper management apps (e.g. the Context Library), listed dynamically. */}
-            {gatekeeperApps.map((app) => {
+            {/* First-class gatekeeper management apps (e.g. the Context Library). */}
+            {primaryNavigationGatekeeperApps(gatekeeperApps).map((app) => {
               // Escape the icon URL for safe interpolation into a CSS url("…") string.
               const maskUrl = app.icon
                 ? `url("${app.icon.url.replace(/[\\"]/g, '\\$&')}")`

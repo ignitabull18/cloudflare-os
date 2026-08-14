@@ -540,8 +540,8 @@ export interface AuthenticatedApi extends RpcTarget {
   // --- Gatekeeper management apps ---
 
   // List the gatekeepers that expose a full-page management UI (VendorDescription.providesUi) and are
-  // available to this user. The Workshop renders a nav entry + page per entry. Independent of whether
-  // the gatekeeper is a singleton.
+  // available to this user. The Workshop renders a page per entry and a primary-nav entry when the
+  // app opts into one. Independent of whether the gatekeeper is a singleton.
   listGatekeeperApps(): Promise<GatekeeperAppInfo[]>;
 
   // Get the app frame (self-contained iframe HTML + the gatekeeper's `ui` capability) for the given
@@ -565,7 +565,7 @@ export interface AuthenticatedApi extends RpcTarget {
   // - Edit permissions on a connected account.
 }
 
-// Describes a gatekeeper's management app, for the Workshop nav + page.
+// Describes a gatekeeper's management app, for its Workshop page and optional primary-nav entry.
 export type GatekeeperAppInfo = {
   // The vendor id (the GATEKEEPER_<ID> binding suffix, lowercased), used as the URL slug at
   // /gatekeepers/$id. This is the vendor, not a specific account: it assumes one management-UI
@@ -575,6 +575,8 @@ export type GatekeeperAppInfo = {
   title: string;
   // Optional icon.
   icon?: AvatarImage;
+  // Whether this management app is also a first-class primary-navigation destination.
+  showInNavigation: boolean;
 };
 
 // ---------------------------------------------------------------------------

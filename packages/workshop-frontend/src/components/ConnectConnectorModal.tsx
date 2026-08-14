@@ -33,6 +33,9 @@ interface ConnectConnectorModalProps {
   onEnsureResources?: (resourceUrlPatterns: string[]) => void
   // Resource `urlPattern`s currently being granted (shows a busy state on the relevant toggle).
   ensuringResourceUrlPatterns?: string[]
+  // Present when this connected gatekeeper exposes a full-page management app.
+  managementAppTitle?: string
+  onOpenManagementApp?: () => void
 }
 
 export default function ConnectConnectorModal({
@@ -53,6 +56,8 @@ export default function ConnectConnectorModal({
   grantedResourceUrlPatterns,
   onEnsureResources,
   ensuringResourceUrlPatterns = [],
+  managementAppTitle,
+  onOpenManagementApp,
 }: ConnectConnectorModalProps) {
   const isManage = mode === 'manage'
 
@@ -399,6 +404,15 @@ export default function ConnectConnectorModal({
                         </WorkshopButton>
                       )}
                     />
+                    {managementAppTitle && onOpenManagementApp && (
+                      <WorkshopButton
+                        tone="primary"
+                        onClick={onOpenManagementApp}
+                        className="!h-9"
+                      >
+                        Open {managementAppTitle}
+                      </WorkshopButton>
+                    )}
                     <WorkshopButton
                       tone="danger"
                       onClick={handleDisconnect}

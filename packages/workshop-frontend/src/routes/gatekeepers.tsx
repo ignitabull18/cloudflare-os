@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useKumoToastManager } from '@cloudflare/kumo'
 import {
@@ -13,7 +13,7 @@ import {
 import ViewToggle from '../components/ViewToggle'
 import { RpcTarget } from 'capnweb'
 import { useAuthenticatedApi } from '../AuthContext'
-import { refreshGatekeeperApps } from '../useGatekeeperApps'
+import { refreshGatekeeperApps, useGatekeeperApps } from '../useGatekeeperApps'
 import { EmptyState } from '../components/EmptyState'
 import ConnectConnectorModal from '../components/ConnectConnectorModal'
 import {
@@ -24,6 +24,7 @@ import {
 import { ConnectedAccountsSubscriber, GatekeeperVendorInfo } from '@gadgets/workshop-shared/api'
 import { useDocumentTitle } from '../useDocumentTitle'
 import { useSiteName } from '../ServerConfigContext'
+import { excludeConnectedGatekeeperVendors } from '../gatekeeperPresentation'
 
 export const Route = createFileRoute('/gatekeepers')({
   component: ConnectorsPage,
@@ -445,6 +446,8 @@ function ConnectorsPage() {
   const siteName = useSiteName()
 
   const { authenticatedApi } = useAuthenticatedApi()
+  const navigate = useNavigate()
+  const gatekeeperApps = useGatekeeperApps()
   const toasts = useKumoToastManager()
 
   const [search, setSearch] = useState('')
@@ -690,11 +693,10 @@ function ConnectorsPage() {
   // An ambient vendor is recognized by `description.autoProvisionsAccount`, which routes the connect
   // action to a direct (no-OAuth) add instead.
   const availableVendors = useMemo<VendorEntry[]>(
-    () => [
-      ...vendors,
-      ...addable,
-    ],
-    [vendors, addable],
+    () => {
+      return excludeConnectedGatekeeperVendors([...vendors, ...addable], accounts)
+    },
+    [accounts, vendors, addable],
   )
 
   const filteredAvailable = useMemo(() => {
@@ -727,6 +729,9 @@ function ConnectorsPage() {
   // True when the connect modal targets an ambient gatekeeper (added directly, no OAuth flow).
   const isTargetAmbient =
     modalTarget?.kind === 'connect' && !!activeVendor?.description.autoProvisionsAccount
+  const activeManagementApp = activeAccount
+    ? gatekeeperApps.find((app) => app.id === activeAccount.vendorId)
+    : undefined
 
   const sectionGridClass =
     view === 'list' ? 'flex flex-col gap-0.5' : 'grid gap-3 sm:grid-cols-2'
@@ -890,6 +895,16 @@ function ConnectorsPage() {
           grantedResourceUrlPatterns={activeAccount?.accountDescription.grantedResourceUrlPatterns}
           onEnsureResources={handleEnsureResources}
           ensuringResourceUrlPatterns={ensuringResourceUrlPatterns}
+          managementAppTitle={activeManagementApp?.title}
+          onOpenManagementApp={activeManagementApp
+            ? () => {
+                handleCloseModal()
+                navigate({
+                  to: '/gatekeepers/$appId',
+                  params: { appId: activeManagementApp.id },
+                })
+              }
+            : undefined}
           disconnecting={disconnecting}
           onDisconnect={handleDisconnect}
           onOpenChange={(open) => {

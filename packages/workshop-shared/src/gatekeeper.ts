@@ -155,8 +155,17 @@ export type AccountDescription = {
   singleton?: { tsType: string };
 
   // If set, this account has a full-page management UI (see GatekeeperUser.startAppUi). The Workshop
-  // surfaces it as a nav entry / page using this title.
-  providesUi?: { title: string; icon?: AvatarImage };
+  // hosts it on the gatekeeper's page. `showInNavigation` defaults to true for management apps that
+  // are also first-class product areas; set it to false when the app should only be opened from the
+  // Gatekeepers page.
+  providesUi?: {
+    /** Title used for the management app's navigation entry and launch action. */
+    title: string;
+    /** Optional icon used for the management app's navigation entry. */
+    icon?: AvatarImage;
+    /** Whether the management app appears in primary navigation. Defaults to true. */
+    showInNavigation?: boolean;
+  };
 }
 
 // Describes metadata about a specific instance of a resource. Returned by Gatekeeper.describe().
