@@ -178,6 +178,11 @@ test("worker entries carry the deploy contract", () => {
   assert.equal(workers["gatekeeper-scheduler"].singleton, true);
   assert.deepEqual(workers["gatekeeper-scheduler"].inputs, []);
   assert.equal(google.preinstall, undefined);
+
+  // Composio contributes one ambient singleton. OpenCLI is intentionally absent until the
+  // release contract can transport a per-customer Cloudflare Container image.
+  assert.equal(workers["gatekeeper-composio"].singleton, true);
+  assert.equal(workers["gatekeeper-opencli"], undefined);
   assert.equal(google.singleton, undefined);
   for (const [name, entry] of Object.entries(workers)) {
     if (entry.preinstall) {

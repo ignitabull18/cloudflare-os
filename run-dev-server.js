@@ -193,6 +193,8 @@ const SHARED_GATEKEEPER_CREDS = {
 // `.dev.vars` is gitignored, so it cannot leave the machine. Secrets travel the same way
 // `CLIENT_SECRET` already does, via SHARED_GATEKEEPER_CREDS above.
 const PASSTHROUGH_GATEKEEPER_VARS = {
+  "gatekeeper-composio": ["COMPOSIO_API_KEY"],
+  "gatekeeper-opencli": ["R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"],
   "gatekeeper-mcp-portal": [
     "MCP_PORTAL_URL", "MCP_PORTAL_NAME", "MCP_PORTAL_AUTH", "MCP_PORTAL_TOKEN",
     "MCP_PORTAL_TRUST_ANNOTATIONS", "MCP_ALLOW_INSECURE",
@@ -204,6 +206,14 @@ for (const gk of gatekeepers) {
   const srcPath = join(gk.dir, "wrangler.jsonc");
   const config = parse(readFileSync(srcPath, "utf8"));
   config.build = { ...config.build, cwd: gk.dir };
+  if (gk.name === "gatekeeper-opencli") {
+    config.vars = {
+      ...config.vars,
+      BACKUP_BUCKET_NAME: "opencli-profile-backups",
+      CLOUDFLARE_ACCOUNT_ID: "local",
+      OPENCLI_LOCAL_BACKUPS: "true",
+    };
+  }
 
   const shared = SHARED_GATEKEEPER_CREDS[gk.name];
   if (shared && process.env[shared.id] && process.env[shared.secret]) {

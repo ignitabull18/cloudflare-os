@@ -69,7 +69,12 @@ const PREINSTALL = new Set(["gatekeeper-context", "gatekeeper-scheduler"]);
 // ambient gatekeeper, so a second install would hand every user a duplicate ambient capsule.
 // Independent of PREINSTALL in principle; the two sets coincide today only because every ambient
 // gatekeeper we ship is also preinstalled.
-const SINGLETON = new Set(["gatekeeper-context", "gatekeeper-scheduler"]);
+const SINGLETON = new Set([
+  "gatekeeper-composio",
+  "gatekeeper-context",
+  "gatekeeper-opencli",
+  "gatekeeper-scheduler",
+]);
 
 export const DEFAULT_CRED_INPUTS = [
   {
@@ -88,14 +93,23 @@ export const DEFAULT_CRED_INPUTS = [
 export function findDeployablePackages(packagesDir) {
   return readdirSync(packagesDir)
       .filter((name) => {
-    try {
-      return statSync(join(packagesDir, name, "wrangler.jsonc")).isFile();
-    } catch {
-      return false;
-    }
-  })
+        try {
+          return statSync(join(packagesDir, name, "wrangler.jsonc")).isFile();
+        } catch {
+          return false;
+        }
+      })
       .toSorted()
-      .map((name) => ({ name, dir: join(packagesDir, name) }));
+      .map((name) => ({ name, dir: join(packagesDir, name) }))
+      .filter(({ dir }) => {
+        const policyPath = join(dir, "release-policy.json");
+        if (!existsSync(policyPath)) return true;
+        const policy = JSON.parse(readFileSync(policyPath, "utf8"));
+        if (policy.distribution === "direct-only" && typeof policy.reason === "string") {
+          return false;
+        }
+        throw new Error(`${policyPath} must declare a direct-only distribution with a reason`);
+      });
 }
 
 export function readWranglerConfig(pkgDir) {

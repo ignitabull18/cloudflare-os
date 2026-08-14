@@ -40,6 +40,7 @@ type OverlayState = 'full' | null
 
 // Upper bound on one workspace-title lookup, matching the app's page size.
 const MAX_RESOLVED_WORKSPACES = 100
+const MAX_EXTERNAL_URL_LENGTH = 4096
 
 // How long one gadget listing is reused across title lookups. The untrusted frame calls this once
 // per page of rows (and could call it in a loop), so the listing is shared rather than repeated.
@@ -136,6 +137,20 @@ class GatekeeperAppHostImpl extends RpcTarget {
 
   openPrompt(prompt: string): void {
     this.#openPrompt(normalizeGatekeeperAppPrompt(prompt))
+  }
+
+  // Open an HTTPS destination selected by the user in a separate top-level tab. Gatekeeper apps
+  // remain opaque-origin, network-isolated frames; they cannot navigate or fetch the URL directly.
+  openExternalUrl(value: string): void {
+    if (typeof value !== 'string' || value.length > MAX_EXTERNAL_URL_LENGTH) {
+      throw new TypeError('Invalid external URL.')
+    }
+    const url = new URL(value)
+    if (url.protocol !== 'https:') throw new TypeError('External URLs must use HTTPS.')
+    const popup = window.open(url.href, '_blank', 'noopener,noreferrer')
+    // WebKit can consume transient user activation while the frame awaits its RPC result. A
+    // same-tab navigation is the reliable tablet fallback and still leaves browser Back intact.
+    if (!popup) window.location.assign(url.href)
   }
 
   // The app calls this once to learn the current mode and register a receiver for later changes.
