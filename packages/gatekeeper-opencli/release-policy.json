@@ -1,0 +1,4 @@
+{
+  "distribution": "direct-only",
+  "reason": "This gatekeeper requires a per-account Cloudflare Container image. Release manifest v2 distributes Worker modules but has no portable container-image artifact contract."
+}

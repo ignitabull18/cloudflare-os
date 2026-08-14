@@ -1,0 +1,12 @@
+[
+  {
+    "name": "R2_ACCESS_KEY_ID",
+    "kind": "secret",
+    "label": "R2 API access key ID"
+  },
+  {
+    "name": "R2_SECRET_ACCESS_KEY",
+    "kind": "secret",
+    "label": "R2 API secret access key"
+  }
+]

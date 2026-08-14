@@ -1,0 +1,39 @@
+{
+  "name": "@gadgets/gatekeeper-opencli",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "echo \"run 'pnpm dev-server' in the root directory instead\" >&2 && exit 1",
+    "deploy": "pnpm run build:app && wrangler deploy",
+    "build:app": "node build-app.mjs",
+    "build:app:watch": "node build-app.mjs --watch",
+    "typecheck:app": "tsc -p tsconfig.app.json && tsc -p tsconfig.vite.json",
+    "types:check": "pnpm run typecheck:app && pnpm run build:app && tsc --noEmit",
+    "build": "pnpm run typecheck:app && pnpm run build:app && tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cloudflare/sandbox": "0.12.5",
+    "@gadgets/backend-utils": "workspace:*",
+    "@gadgets/workshop-shared": "workspace:*",
+    "capnweb": "^0.8.0",
+    "capnweb-validate": "0.2.1"
+  },
+  "devDependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "@types/node": "26.1.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "terser": "^5.49.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.119.0"
+  }
+}

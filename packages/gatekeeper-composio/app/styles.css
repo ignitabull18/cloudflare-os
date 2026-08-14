@@ -1,0 +1,60 @@
+:root {
+  color-scheme: light;
+  --base: #fbfbfd;
+  --surface: #fff;
+  --text: #19171f;
+  --muted: #686270;
+  --line: #e8e4ed;
+  --brand: #7c3aed;
+  --brand-hover: #6d28d9;
+  --tint: #f3efff;
+  --danger: #b42318;
+}
+[data-mode="dark"] {
+  color-scheme: dark;
+  --base: #15121a;
+  --surface: #201b27;
+  --text: #f5f1fa;
+  --muted: #b4aabd;
+  --line: #383040;
+  --brand: #9f75ff;
+  --brand-hover: #b397ff;
+  --tint: #2b2140;
+  --danger: #ff8d85;
+}
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; background: var(--base); }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; }
+button { min-height: 44px; border: 0; border-radius: 11px; padding: 0 15px; background: var(--brand); color: white; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; gap: 7px; cursor: pointer; }
+button:hover { background: var(--brand-hover); }
+button:disabled { opacity: .55; cursor: wait; }
+button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+main { width: min(100%, 1100px); margin: 0 auto; padding: max(28px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); }
+header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.brand-mark { width: 52px; height: 52px; border-radius: 14px; background: var(--brand); color: white; display: grid; place-items: center; font-size: 27px; font-weight: 800; }
+h1, h2, p { margin: 0; }
+h1 { font-size: clamp(25px, 4vw, 34px); letter-spacing: -.025em; }
+header p { color: var(--muted); margin-top: 5px; line-height: 1.45; }
+.search { min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px; }
+.search:focus-within { outline: 3px solid color-mix(in srgb, var(--brand) 25%, transparent); }
+.search input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 16px; }
+.notice { display: flex; align-items: center; gap: 9px; margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--tint); color: var(--muted); font-size: 14px; }
+.notice.error { color: var(--danger); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-top: 20px; }
+article { min-height: 220px; display: flex; flex-direction: column; padding: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; }
+.app-heading { display: flex; align-items: center; gap: 12px; }
+.logo { width: 44px; height: 44px; flex: 0 0 44px; display: grid; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 11px; background: white; color: #4c1d95; font-size: 20px; font-weight: 700; }
+.logo img { width: 31px; height: 31px; object-fit: contain; }
+.app-title { min-width: 0; flex: 1; }
+.app-title h2 { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-title span { color: var(--muted); font-size: 13px; }
+.connected { color: #16a34a; }
+article > p { margin-top: 15px; color: var(--muted); font-size: 14px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.actions { margin-top: auto; padding-top: 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.status { color: #15803d; font-size: 14px; font-weight: 650; }
+.empty { padding: 70px 0; text-align: center; color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (min-width: 740px) { main { padding-top: 46px; } }
+@media (pointer: coarse) { button { min-height: 48px; } article { min-height: 230px; } }
+@media (prefers-reduced-motion: no-preference) { article, button { transition: transform 140ms ease, background 140ms ease; } button:active { transform: scale(.98); } }

@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gatekeeper-opencli",
+  "main": ".wrangler/validate/src/index.ts",
+  "build": { "command": "pnpm exec capnweb-validate build --out .wrangler/validate", "watch_dir": "src" },
+  "compatibility_date": "2026-07-27",
+  "compatibility_flags": ["nodejs_compat", "allow_irrevocable_stub_storage"],
+  "rules": [{ "type": "Text", "globs": ["**/*.txt"], "fallthrough": false }],
+  "containers": [
+    {
+      "class_name": "Sandbox",
+      "image": "./Dockerfile",
+      "instance_type": "basic",
+      "max_instances": 20,
+      "rollout_step_percentage": 100
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "class_name": "Sandbox", "name": "Sandbox" }]
+  },
+  "migrations": [
+    { "tag": "v0", "new_sqlite_classes": ["OpenCliDriver", "OpenCliGatekeeper"] },
+    { "tag": "v1", "new_sqlite_classes": ["Sandbox"] }
+  ],
+  "r2_buckets": [{ "binding": "BACKUP_BUCKET", "bucket_name": "opencli-profile-backups" }],
+  "vars": {
+    "BACKUP_BUCKET_NAME": "$R2_BACKUP_BUCKET_NAME",
+    "CLOUDFLARE_ACCOUNT_ID": "$ACCOUNT_ID"
+  },
+  "observability": { "enabled": true, "head_sampling_rate": 1, "logs": { "invocation_logs": false } }
+}
