@@ -12,6 +12,7 @@ const CF_OAUTH_TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
 // client isn't permitted it; identity comes from user-details.read (the /user API).
 // account-settings.read is required to enumerate the user's account(s).
 export const FULL_SCOPES = [
+  "offline_access",
   "aig.read",
   "aig.run",
   "workers-scripts.read",
