@@ -1325,11 +1325,26 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
   // callers (gadget open, app nav) provision and read the accounts back in a single round trip to this
   // DO. Callers filter on `description.singleton` (ambient capsules / catalog) or
   // `description.providesUi` (management-UI listing).
-  async listProvidedAccounts(): Promise<ProvidedAccountInfo[]> {
+  async listProvidedAccounts(refreshDescriptions = false): Promise<ProvidedAccountInfo[]> {
     await this.#ensureAutoProvisionedAccounts();
     let config = await readAdminConfig(this.env);
+    let records = [...this.#connectedAccountRecords()];
+    if (refreshDescriptions) {
+      await Promise.all(records.filter(rec => rec.autoProvisioned).map(async rec => {
+        try {
+          rec.description = await rec.account.describe();
+          this.storage.connectedAccounts.put(rec);
+        } catch (err) {
+          logger.warn("failed to refresh provided account description", {
+            event: "account.provided.description.refresh.failed",
+            vendorId: rec.vendorId,
+            error: err,
+          });
+        }
+      }));
+    }
     let result: ProvidedAccountInfo[] = [];
-    for (let rec of this.#connectedAccountRecords()) {
+    for (let rec of records) {
       if (!rec.description.singleton && !rec.description.providesUi) continue;
       // A "disabled" ambient gatekeeper's account stays dormant: don't surface its singleton capsule
       // or management UI. (Its data is preserved, so re-enabling restores it.)

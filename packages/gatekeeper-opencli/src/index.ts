@@ -343,7 +343,7 @@ export class OpenCliAccount
       displayName: "OpenCLI",
       avatar: OPENCLI_LOGO,
       singleton: { tsType: "OpenCLI" },
-      providesUi: { title: "OpenCLI", icon: OPENCLI_LOGO },
+      providesUi: { title: "OpenCLI", icon: OPENCLI_LOGO, showInNavigation: false },
     };
   }
   async getSingletonGatekeeperClass(): Promise<DurableObjectClass<Gatekeeper<OpenCLI>>> {

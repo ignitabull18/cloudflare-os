@@ -323,7 +323,7 @@ export class ComposioAccount
       displayName: "Composio",
       avatar: COMPOSIO_LOGO,
       singleton: { tsType: "Composio" },
-      providesUi: { title: "Composio", icon: COMPOSIO_LOGO },
+      providesUi: { title: "Composio", icon: COMPOSIO_LOGO, showInNavigation: false },
     };
   }
 
