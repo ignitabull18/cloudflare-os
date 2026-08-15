@@ -6,6 +6,7 @@ import {
   Hexagon,
   House,
   MagnifyingGlass,
+  Pulse,
   SidebarSimple,
   SquaresFour,
   Stack,
@@ -126,6 +127,12 @@ export default function Sidebar({
               to="/workspaces"
               label="Workspaces"
               icon={<SquaresFour size={14} weight="regular" />}
+              collapsed={collapsed}
+            />
+            <SidebarItem
+              to="/operations"
+              label="Operations"
+              icon={<Pulse size={14} weight="regular" />}
               collapsed={collapsed}
             />
             <SidebarItem

@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Cloudflare OS",
+    "slug": "cloudflare-os",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "cloudflareos",
+    "userInterfaceStyle": "light",
+    "icon": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+    "splash": {
+      "image": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fcfcfb"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.ignitabull.cloudflareos",
+      "associatedDomains": [
+        "webcredentials:os.ignitabull.org"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "org.ignitabull.cloudflareos",
+      "adaptiveIcon": {
+        "foregroundImage": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+        "backgroundColor": "#fcfcfb"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
