@@ -198,31 +198,31 @@ function OperationsPage() {
   }
 
   return (
-    <div className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col px-5 pb-28 pt-5 sm:px-8 sm:pt-10 md:pb-14 lg:px-12">
+    <div className="relative mx-auto flex min-h-full w-full max-w-5xl flex-col px-5 pb-28 pt-4 sm:px-8 sm:pt-10 md:pb-14 lg:px-12">
       <header className="flex items-center justify-between md:hidden">
         <Link to="/" className="flex items-center gap-3 text-kumo-strong">
-          <Hexagon size={27} weight="bold" className="text-kumo-brand" />
-          <span className="text-lg font-semibold tracking-[-0.35px]">Cloudflare OS</span>
+          <Hexagon size={24} weight="bold" className="text-kumo-brand" />
+          <span className="text-base font-semibold tracking-[-0.3px]">Cloudflare OS</span>
         </Link>
-        <button aria-label="Notifications" className="flex h-11 w-11 items-center justify-center rounded-full border border-kumo-line bg-kumo-control text-kumo-default shadow-sm">
-          <Bell size={21} />
+        <button aria-label="Notifications" className="flex h-9 w-9 items-center justify-center rounded-full border border-kumo-line bg-kumo-control text-kumo-default shadow-sm">
+          <Bell size={18} />
         </button>
       </header>
 
-      <section className="mt-14 md:mt-2">
+      <section className="mt-9 md:mt-2">
         <div className="flex items-center gap-3 text-kumo-subtle">
-          <Sun size={25} className="text-kumo-brand" />
-          <p className="text-lg tracking-[-0.3px] sm:text-xl">{greeting()}, {firstName}</p>
+          <Sun size={21} className="text-kumo-brand" />
+          <p className="text-base tracking-[-0.25px] sm:text-xl">{greeting()}, {firstName}</p>
         </div>
-        <h1 className="mt-4 max-w-3xl text-[2.15rem] font-semibold leading-[1.05] tracking-[-1.2px] text-kumo-strong sm:text-5xl">
+        <h1 className="mt-4 max-w-3xl text-[1.65rem] font-semibold leading-[1.08] tracking-[-0.8px] text-kumo-strong sm:text-5xl">
           {headline}
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-7 text-kumo-subtle sm:text-lg">
+        <p className="mt-4 max-w-2xl text-sm leading-5 text-kumo-subtle sm:text-lg sm:leading-7">
           I’m monitoring your systems while your MacBook is off and will take safe actions on your behalf.
         </p>
       </section>
 
-      <section className="mt-14">
+      <section className="mt-11">
         <div className="mb-4 flex items-center gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-[0.12em] text-kumo-subtle">Needs your attention</h2>
           <span className="rounded-lg bg-kumo-fill px-2 py-1 text-xs font-medium text-kumo-default">{attentionCount}</span>
@@ -240,11 +240,11 @@ function OperationsPage() {
               key={`credential-${account.id}`}
               type="button"
               onClick={() => void reconnect(account.id)}
-              className={`flex w-full items-center gap-4 px-5 py-5 text-left transition-colors hover:bg-kumo-tint ${index > 0 ? 'border-t border-kumo-line' : ''}`}
+              className={`flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-kumo-tint ${index > 0 ? 'border-t border-kumo-line' : ''}`}
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#fff4ee] text-kumo-brand"><Warning size={26} /></span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-base font-medium text-kumo-strong">{account.vendor.displayName} credentials expired</span><span className="mt-0.5 block truncate text-sm text-kumo-subtle">Update to prevent sync disruptions</span></span>
-              <span className="hidden text-sm text-kumo-inactive sm:block">Today</span><CaretRight size={18} className="shrink-0 text-kumo-subtle" />
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff4ee] text-kumo-brand"><Warning size={22} /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-kumo-strong">{account.vendor.displayName} credentials expired</span><span className="mt-0.5 block truncate text-xs text-kumo-subtle">Update to prevent sync disruptions</span></span>
+              <span className="text-[10px] text-kumo-inactive">Today</span><CaretRight size={16} className="shrink-0 text-kumo-subtle" />
             </button>
           ))}
           {snapshot.approvals.map(({ action, workspace }, index) => (
@@ -252,37 +252,37 @@ function OperationsPage() {
               key={`approval-${workspace.id}-${action.id}`}
               to="/workspace/$id"
               params={{ id: workspace.id }}
-              className={`flex items-center gap-4 border-t border-kumo-line px-5 py-5 text-left transition-colors hover:bg-kumo-tint ${index === 0 && expiredAccounts.length === 0 ? 'border-t-0' : ''}`}
+              className={`flex items-center gap-3 border-t border-kumo-line px-4 py-4 text-left transition-colors hover:bg-kumo-tint ${index === 0 && expiredAccounts.length === 0 ? 'border-t-0' : ''}`}
             >
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#fff4ee] text-kumo-brand"><ShieldCheck size={26} /></span>
-              <span className="min-w-0 flex-1"><span className="block truncate text-base font-medium text-kumo-strong">{action.description.title || 'Pending approval'}</span><span className="mt-0.5 block truncate text-sm text-kumo-subtle">{workspace.title} · {action.resourceTitle}</span></span>
-              <span className="hidden text-sm text-kumo-inactive sm:block">{dateLabel(action.createdAt)}</span><CaretRight size={18} className="shrink-0 text-kumo-subtle" />
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#fff4ee] text-kumo-brand"><ShieldCheck size={22} /></span>
+              <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium text-kumo-strong">{action.description.title || 'Pending approval'}</span><span className="mt-0.5 block truncate text-xs text-kumo-subtle">{workspace.title} · {action.resourceTitle}</span></span>
+              <span className="text-[10px] text-kumo-inactive">{dateLabel(action.createdAt)}</span><CaretRight size={16} className="shrink-0 text-kumo-subtle" />
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="mt-12 rounded-2xl border border-kumo-line bg-kumo-control p-5 shadow-sm sm:p-6">
+      <section className="mt-10 rounded-2xl border border-kumo-line bg-kumo-control p-4 shadow-sm sm:p-6">
         <textarea
           value={ask}
           onChange={(event) => setAsk(event.target.value)}
           onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); submitAsk() } }}
           placeholder="Ask anything or request an action…"
-          rows={3}
-          className="w-full resize-none bg-transparent text-base leading-6 text-kumo-default outline-none placeholder:text-kumo-inactive"
+          rows={2}
+          className="w-full resize-none bg-transparent text-sm leading-5 text-kumo-default outline-none placeholder:text-kumo-inactive sm:text-base sm:leading-6"
         />
         <div className="mt-4 flex items-center justify-between">
           <span className="text-sm text-kumo-subtle">Cloudflare OS agent</span>
-          <button type="button" onClick={submitAsk} disabled={!ask.trim()} aria-label="Send" className="flex h-11 w-11 items-center justify-center rounded-xl bg-kumo-brand text-white transition-colors hover:bg-kumo-brand-hover disabled:cursor-not-allowed disabled:opacity-40"><PaperPlaneRight size={22} weight="bold" /></button>
+          <button type="button" onClick={submitAsk} disabled={!ask.trim()} aria-label="Send" className="flex h-10 w-10 items-center justify-center rounded-xl bg-kumo-brand text-white transition-colors hover:bg-kumo-brand-hover disabled:cursor-not-allowed disabled:opacity-40"><PaperPlaneRight size={20} weight="bold" /></button>
         </div>
       </section>
 
-      <section className="mt-10">
+      <section className="mt-8">
         <h2 className="mb-4 text-xs font-semibold uppercase tracking-[0.12em] text-kumo-subtle">Suggested actions</h2>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <button type="button" onClick={() => expiredAccounts[0] ? void reconnect(expiredAccounts[0].id) : navigate({ to: '/gatekeepers' })} className="flex h-14 items-center justify-center gap-3 rounded-xl border border-kumo-line bg-kumo-control px-4 text-sm font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint"><Wrench size={21} />Fix credentials</button>
-          <Link to="/gatekeepers/$appId" params={{ appId: 'scheduler' }} className="flex h-14 items-center justify-center gap-3 rounded-xl border border-kumo-line bg-kumo-control px-4 text-sm font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint"><ListChecks size={21} />Show failed tasks</Link>
-          <button type="button" disabled={backupStatus !== null} onClick={() => void backUpNow()} className="flex h-14 items-center justify-center gap-3 rounded-xl border border-kumo-line bg-kumo-control px-4 text-sm font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint disabled:opacity-60"><Database size={21} />{backupStatus || 'Back up now'}</button>
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          <button type="button" onClick={() => expiredAccounts[0] ? void reconnect(expiredAccounts[0].id) : navigate({ to: '/gatekeepers' })} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-kumo-line bg-kumo-control px-2 text-[11px] font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint sm:h-14 sm:px-4 sm:text-sm"><Wrench size={18} />Fix credentials</button>
+          <Link to="/gatekeepers/$appId" params={{ appId: 'scheduler' }} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-kumo-line bg-kumo-control px-2 text-[11px] font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint sm:h-14 sm:px-4 sm:text-sm"><ListChecks size={18} />Show failed tasks</Link>
+          <button type="button" disabled={backupStatus !== null} onClick={() => void backUpNow()} className="flex h-12 items-center justify-center gap-2 rounded-xl border border-kumo-line bg-kumo-control px-2 text-[11px] font-medium text-kumo-default shadow-sm transition-colors hover:bg-kumo-tint disabled:opacity-60 sm:h-14 sm:px-4 sm:text-sm"><Database size={18} />{backupStatus || 'Back up now'}</button>
         </div>
         <div className="mt-4 flex items-center justify-between gap-4 text-xs text-kumo-subtle">
           <p>Backups include committed gadget code and connection requirements. Secrets and third-party data are never copied.</p>
