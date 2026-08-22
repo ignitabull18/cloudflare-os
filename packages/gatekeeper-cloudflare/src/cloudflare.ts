@@ -6,7 +6,11 @@ import {
   SupportedResource, ResourceConfiguratorFrame, ResourceDescription, ApprovalQueue,
   stripTrailingSlashes,
 } from "@gadgets/workshop-shared/gatekeeper";
-import { CloudflareGatekeeperUser } from "@gadgets/workshop-shared/cloudflare-gatekeeper";
+import {
+  CloudflareDashboardRange,
+  CloudflareGatekeeperUser,
+  CloudflareDashboardSnapshot,
+} from "@gadgets/workshop-shared/cloudflare-gatekeeper";
 import { getOAuthConfig, buildAuthorizeUrl, generatePkce, exchangeCode, refreshTokens, AUTH_SCOPES, FULL_SCOPES } from "./oauth";
 import { CloudflareApi, CloudflareApiError, fetchIdentity } from "./cloudflare-api";
 import { CloudflareAccountConfiguratorUI } from "./cloudflare-configurator.js";
@@ -412,6 +416,18 @@ export class GatekeeperUserImpl extends WorkerEntrypoint<Env, GatekeeperUserImpl
 
   async getUsableAccessToken(): Promise<string | null> {
     return this.#account().getAccessToken();
+  }
+
+  async getDashboardSnapshot(
+    accountId?: string,
+    range?: CloudflareDashboardRange,
+  ): Promise<CloudflareDashboardSnapshot> {
+    const api = new CloudflareApi(async () => {
+      const token = await this.#account().getAccessToken();
+      if (!token) throw new CloudflareApiError("Cloudflare credentials are unavailable.", 401);
+      return token;
+    });
+    return api.getDashboardSnapshot(accountId, range);
   }
 
   async getSupportedResources(): Promise<SupportedResource[]> {

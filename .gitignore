@@ -3,6 +3,10 @@ node_modules/
 
 # Build outputs
 dist/
+packages/cloudflare-os-mobile/dist-ios/
+packages/cloudflare-os-mobile/*mobile-screen*.png
+packages/cloudflare-os-mobile/design-comparison-*.png
+.expo/
 # Generated gatekeeper UI bundles, rebuilt as a prerequisite of build/types:check/deploy
 packages/gatekeeper-*/src/generated/*-configurator-ui.txt
 packages/gatekeeper-*/src/generated/*-configurator-ui.js*

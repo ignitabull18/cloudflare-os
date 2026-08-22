@@ -26,6 +26,7 @@
 import { RpcCompatible, RpcStub, RpcTarget } from "capnweb";
 import { AccountDescription, ActionKind, ActionDescription, AvatarImage, GatekeeperUiFrame, ObservationDescription, ResourceDescription, ResourceConfiguratorFrame, SupportedResource, VendorDescription, HookDescription } from "./gatekeeper.js";
 import type { UiFeatureFlags } from "./feature-flags.js";
+import type { CloudflareDashboardSnapshot } from "./cloudflare-gatekeeper.js";
 
 export const SERVICE_SALT = new Uint8Array([
   0xd9, 0x4e, 0x54, 0x1d, 0x29, 0xc1, 0x03, 0x74, 0x73, 0x7e, 0xb3, 0xe3, 0x34, 0x6d, 0x8f, 0x21
@@ -355,6 +356,9 @@ export interface AuthenticatedApi extends RpcTarget {
   // Select which Cloudflare account to bill. Persists the choice. Throws if the account isn't
   // accessible.
   selectCloudflareAccount(accountId: string): Promise<void>;
+
+  /** Returns a read-only Cloudflare operations snapshot for the dashboard. */
+  getCloudflareDashboard(accountId?: string, range?: import("./cloudflare-gatekeeper.js").CloudflareDashboardRange): Promise<CloudflareDashboardSnapshot>;
 
   // Upload a user avatar image. The data should be a compressed image (JPEG/PNG), ideally under
   // 50 KB. Pass null to remove the avatar.

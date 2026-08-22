@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import {
   Blueprint,
   BookOpen,
+  ChartLineUp,
   Compass,
   Hexagon,
   House,
@@ -119,6 +120,12 @@ export default function Sidebar({
               to="/"
               label="Home"
               icon={<House size={14} weight="regular" />}
+              collapsed={collapsed}
+            />
+            <SidebarItem
+              to="/dashboard"
+              label="Dashboard"
+              icon={<ChartLineUp size={14} weight="regular" />}
               collapsed={collapsed}
             />
             <SidebarItem

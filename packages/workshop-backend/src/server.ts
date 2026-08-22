@@ -3,6 +3,7 @@ import { validateRpc } from "capnweb-validate";
 import type { JWTPayload } from "jose";
 import { PublicApi, AuthenticatedApi, Overseer, GadgetMetadataWithTimestamps, AiChatAuthorInfo, AiModelConfig, AiGatewayInfo, AiModelProvider, ConnectedAccountsSubscriber, ConnectedAccountsFilter, GatekeeperVendorFilter, ObserverConfigCallback, BlueprintLibrarySummary, BlueprintPublicInfo, BlueprintUserSummary, BlueprintBindingAssignment, AgentSpawnerConfig, WorkpieceId, BLUEPRINT_SCREENSHOT_PATH_PREFIX, BLUEPRINT_SCREENSHOT_R2_PREFIX, blueprintScreenshotUrl, ServerConfig, CloudflareUsageInfo, CloudflareAccountOption, LoginAttempt, GatekeeperAppInfo, AdminApi, GatekeeperVendorInfo, OutputFormatOffer, ListOutputsResult, createOpenGadgetError, getOpenGadgetErrorCode, OPEN_GADGET_ERROR_CODES } from '@gadgets/workshop-shared/api';
 import type { UiFeatureFlags } from "@gadgets/workshop-shared/feature-flags";
+import type { CloudflareDashboardSnapshot } from "@gadgets/workshop-shared/cloudflare-gatekeeper";
 import { getServerConfig } from "./deployment-config.js";
 import { isPasswordAuthEnabled, getAuthGatekeeperAllowlist } from "./auth/config.js";
 import { getAuthVendorBinding } from "./auth/auth-vendors.js";
@@ -159,6 +160,37 @@ class AuthenticatedApiImpl extends RpcTarget implements AuthenticatedApi {
 
   selectCloudflareAccount(accountId: string): Promise<void> {
     return selectAccount(this.env, this.user, accountId);
+  }
+
+  async getCloudflareDashboard(
+    accountId?: string,
+    range?: import("@gadgets/workshop-shared/cloudflare-gatekeeper").CloudflareDashboardRange,
+  ): Promise<CloudflareDashboardSnapshot> {
+    using account = await this.user.getCloudflareApiMcpAccount();
+    if (!account) {
+      return {
+        connected: false,
+        generatedAt: new Date().toISOString(),
+        accounts: [],
+        needsAccountSelection: false,
+        range: range ?? "24h",
+        analyticsZonesRead: 0,
+        analyticsZonesTotal: 0,
+        headline: [],
+        traffic: [],
+        zones: [],
+        securityEvents: { id: "security-events", label: "Security events", value: null,
+          unit: "count", status: "unavailable", note: "Connect the Cloudflare API MCP to load this metric." },
+        securityActions: [],
+        workerRequests: { id: "worker-requests", label: "Worker requests", value: null,
+          unit: "count", status: "unavailable", note: "Connect the Cloudflare API MCP to load this metric." },
+        workerErrors: { id: "worker-errors", label: "Worker errors", value: null,
+          unit: "count", status: "unavailable", note: "Connect the Cloudflare API MCP to load this metric." },
+        workers: [],
+        services: [],
+      };
+    }
+    return account.getCloudflareDashboardSnapshot(accountId, range);
   }
 
   async setAvatar(data: Uint8Array | null): Promise<void> {

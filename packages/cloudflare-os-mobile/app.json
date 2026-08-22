@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Cloudflare OS",
+    "slug": "cloudflare-os",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+    "scheme": "cloudflareos",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "org.ignitabull.cloudflareos",
+      "supportsTablet": false,
+      "icon": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#fcfcfb",
+          "image": "../../ios/CloudflareOS/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png",
+          "imageWidth": 96
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

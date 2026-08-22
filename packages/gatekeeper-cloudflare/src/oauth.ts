@@ -14,11 +14,25 @@ const CF_OAUTH_TOKEN_URL = "https://dash.cloudflare.com/oauth2/token";
 export const FULL_SCOPES = [
   "aig.read",
   "aig.run",
+  "access-app.read",
+  "access.read",
+  "account-dns-settings.read",
+  "account-analytics.read",
+  "analytics.read",
+  "argotunnel.read",
+  "challenge-widgets.read",
+  "d1.read",
+  "page.read",
+  "query-cache.read",
+  "queues.read",
+  "stream.read",
+  "vectorize.read",
   "workers-scripts.read",
   "workers-r2.read",
   "workers-kv-storage.read",
   "user-details.read",
   "account-settings.read",
+  "zone.read",
 ];
 
 // Minimal scope for sign-in only. Used in "auth" mode (the resulting grant is transient).

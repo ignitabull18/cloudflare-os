@@ -34,7 +34,7 @@ import { generateSessionTypes, sessionTypeName } from "@gadgets/mcp-shared/schem
 import { McpAccountBase, type ConnectedServer, type ConnectOutcome }
   from "@gadgets/mcp-shared/account";
 import { generateNonce } from "@gadgets/mcp-shared/connect-nonce";
-import { fetchTools, type ConnectionAccount } from "@gadgets/mcp-shared/connection";
+import { fetchTools, withClient, type ConnectionAccount } from "@gadgets/mcp-shared/connection";
 import { McpSessionBase } from "@gadgets/mcp-shared/session";
 import { McpFacetBase } from "@gadgets/mcp-shared/facet";
 import { looksLikePortal } from "@gadgets/mcp-shared/portal";
@@ -69,6 +69,15 @@ import { MCP_BASE_TYPES } from "@gadgets/mcp-shared/base-types";
 import MCP_LOGO_SVG from "./mcp-logo.svg";
 import MCP_SERVER_CONFIGURATOR_HTML from "./generated/server-configurator-ui.txt";
 import type { McpServerConfiguratorRpc } from "./configurator/server-configurator-types";
+import type {
+  CloudflareDashboardRange,
+  CloudflareDashboardSnapshot,
+} from "@gadgets/workshop-shared/cloudflare-gatekeeper";
+import {
+  CLOUDFLARE_API_MCP_ORIGIN,
+  CLOUDFLARE_API_MCP_PATH,
+  getCloudflareMcpDashboardSnapshot,
+} from "./cloudflare-dashboard.js";
 
 const VENDOR_ID = "mcp";
 
@@ -250,6 +259,45 @@ export class GatekeeperUserImpl
 
   async getSupportedResources(): Promise<SupportedResource[]> {
     return mcpResources(fetchOptions(this.env).allowInsecure === true);
+  }
+
+  // Workshop-only dashboard bridge. The browser can choose only an account and time range; the
+  // adapter owns the fixed read programs, so this does not turn MCP `execute` into an unapproved
+  // arbitrary-code or write path.
+  async getCloudflareDashboardSnapshot(
+    accountId?: string,
+    range?: CloudflareDashboardRange,
+  ): Promise<CloudflareDashboardSnapshot> {
+    const account = this.#account();
+    const server = await account.getServer();
+    const endpoint = new URL(server.endpoint);
+    if (endpoint.origin !== CLOUDFLARE_API_MCP_ORIGIN
+        || endpoint.pathname !== CLOUDFLARE_API_MCP_PATH) {
+      throw new Error("This MCP connection is not Cloudflare's official API server.");
+    }
+
+    const execute = async (code: string, selectedAccountId?: string): Promise<unknown> => {
+      const args: Record<string, unknown> = { code };
+      if (selectedAccountId) args.account_id = selectedAccountId;
+      const result = await withClient(
+        this.env,
+        account,
+        server.endpoint,
+        client => client.callTool("execute", args),
+      );
+      const text = (result.content ?? [])
+        .filter((block): block is { type: "text"; text: string } => block.type === "text")
+        .map(block => block.text)
+        .join("\n");
+      if (result.isError) throw new Error(text || "Cloudflare API MCP execution failed.");
+      try {
+        return JSON.parse(text) as unknown;
+      } catch {
+        throw new Error("Cloudflare API MCP returned a non-JSON dashboard response.");
+      }
+    };
+
+    return getCloudflareMcpDashboardSnapshot(execute, accountId, range);
   }
 
   async getGatekeeperClassFor(url: string): Promise<{

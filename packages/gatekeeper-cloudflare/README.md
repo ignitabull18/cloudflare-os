@@ -7,13 +7,15 @@ This package provides Cloudflare OAuth integration for Gadgets. For now it serve
   (`offline_access user-details.read`) to read the account email (verified by Cloudflare, via the
   `/user` API), which becomes the user's identity. The sign-in grant is transient (discarded right
   after the email is read).
-- **AI Gateway billing:** when a user connects Cloudflare (or signs in and later connects it), the
-  full scopes are requested and the connection persists. The Workshop then reads a usable access
-  token from it (`getUsableAccessToken`) to power the [AI Gateway billing](../../docs/ai-gateway-billing.md)
-  flow — reading the credit balance and routing BYOK inference through the account's default AI
-  Gateway.
+- **Operations dashboard and AI Gateway billing:** when a user connects Cloudflare, the full
+  read-only scopes are requested and the connection persists. The Workshop uses that connection to
+  assemble the `/dashboard` traffic, caching, 5xx reliability, firewall-event, Workers, service
+  inventory, AI, and Zero Trust analytics and to power the
+  [AI Gateway billing](../../docs/ai-gateway-billing.md) flow. The dashboard supports 24-hour,
+  7-day, and 30-day windows with equal-period comparisons and explicit partial-coverage warnings.
 
-Resource capabilities for gadgets/agents (Workers logs, R2, etc.) will be added later.
+The dashboard snapshot is Workshop-only. Resource capabilities exposed to gadgets and agents remain
+separate, approval-recorded capabilities.
 
 `openid` is intentionally **not** requested — the Cloudflare dashboard OAuth client isn't permitted
 that scope; identity comes from the `/user` API (`user-details.read`).
@@ -70,9 +72,9 @@ AUTH_GATEKEEPERS=cloudflare,google,github
 
 The order controls the order of the login buttons. For the AI Gateway billing / top-up flow, also
 set `ENABLE_CLOUDFLARE_LIMITS=true` (see [AI Gateway billing](../../docs/ai-gateway-billing.md)); a
-user enables billing by connecting Cloudflare, which requests the full scopes
-(`aig.read aig.run workers-scripts.read workers-r2.read workers-kv-storage.read user-details.read
-account-settings.read`).
+user enables billing or the operations dashboard by connecting Cloudflare. The OAuth client must
+allow every scope listed in `src/oauth.ts` before a user reconnects; Cloudflare rejects a request
+that asks for a scope the registered client does not allow.
 
 ### Step 4: Verify Setup
 

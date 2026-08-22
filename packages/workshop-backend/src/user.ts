@@ -2,7 +2,10 @@ import { RpcStub } from "capnweb";
 import { GadgetMetadataWithTimestamps, AiChatAuthorInfo, AiModelConfig, SUGGESTED_MODELS, CollaboratorRole, ConnectedAccountsSubscriber, ConnectedAccountsFilter, GatekeeperVendorFilter, GadgetMetadata, BlueprintMetadata, BlueprintLibrarySummary, BlueprintSource, BlueprintUserSummary, BLUEPRINT_SCREENSHOT_R2_PREFIX, GatekeeperVendorInfo, BlueprintOutput, OutputSummary, WorkpieceId, ListOutputsResult } from '@gadgets/workshop-shared/api';
 import { Gatekeeper, GatekeeperUser, GatekeeperUserVerifier, GatekeeperVendor, AccountDescription, VendorDescription, GatekeeperConnectCallback, SupportedResource, ResourceConfiguratorFrame, AppUiContext, GatekeeperUiFrame } from "@gadgets/workshop-shared/gatekeeper";
 import { shouldAutoProvisionAccount, ambientGatekeeperMode } from "./provisioning-policy.js";
-import { CloudflareGatekeeperUser } from "@gadgets/workshop-shared/cloudflare-gatekeeper";
+import {
+  CloudflareApiMcpUser,
+  CloudflareGatekeeperUser,
+} from "@gadgets/workshop-shared/cloudflare-gatekeeper";
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 import { createTypedStorage, collection } from "@gadgets/typed-storage";
 import { createWorkshopLogger } from "./observability";
@@ -66,6 +69,7 @@ function areCredentialsValid(record: ConnectedAccountRecord): boolean {
 // Vendor id of the Cloudflare gatekeeper (the suffix of GATEKEEPER_CLOUDFLARE, lowercased). The AI
 // Gateway billing flow is Cloudflare-specific, so several places key off this literal.
 export const CLOUDFLARE_VENDOR_ID = "cloudflare";
+export const CLOUDFLARE_API_MCP_ENDPOINT = "https://mcp.cloudflare.com/mcp";
 
 export type UserAiModelRecord = {
   profile: AiChatAuthorInfo;
@@ -622,6 +626,24 @@ export class UserDurableObject extends DurableObject<Cloudflare.Env> {
       try { rec = this.storage.connectedAccounts.get(id); } catch { continue; }
       if (rec && rec.vendorId === CLOUDFLARE_VENDOR_ID) {
         return rec.account as unknown as Fetcher<CloudflareGatekeeperUser>;
+      }
+    }
+    return null;
+  }
+
+  // Return the user's connection to Cloudflare's official API MCP. The dashboard uses this instead
+  // of growing a second, partial Cloudflare API client in the native OAuth gatekeeper.
+  async getCloudflareApiMcpAccount(): Promise<Fetcher<CloudflareApiMcpUser> | null> {
+    for (const rec of this.#connectedAccountRecords()) {
+      if (rec.vendorId !== "mcp" || !areCredentialsValid(rec)) continue;
+      try {
+        const endpoint = new URL(rec.description.uniqueName ?? "");
+        const expected = new URL(CLOUDFLARE_API_MCP_ENDPOINT);
+        if (endpoint.origin === expected.origin && endpoint.pathname === expected.pathname) {
+          return rec.account as unknown as Fetcher<CloudflareApiMcpUser>;
+        }
+      } catch {
+        // A non-URL identity belongs to some other MCP server.
       }
     }
     return null;
